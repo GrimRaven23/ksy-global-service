@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import type { PrismaClient } from "@prisma/client";
 import { snapshotCompany } from "./company";
 
-async function getNextBLNumber(tx: any): Promise<string> {
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
+async function getNextBLNumber(tx: TransactionClient): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `BL-${year}-`;
   const seq = await tx.documentSequence.upsert({
@@ -39,7 +42,7 @@ export async function createDeliveryNote(data: {
     customerEmail: data.customerEmail || null,
   };
 
-  return prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx) => {
     const num = await getNextBLNumber(tx);
 
     const doc = await tx.deliveryNote.create({
@@ -82,7 +85,7 @@ export async function updateDeliveryNote(id: string, data: Record<string, unknow
   if (data.customerPhone !== undefined) customerSnap.customerPhone = data.customerPhone as string;
   if (data.customerEmail !== undefined) customerSnap.customerEmail = data.customerEmail as string;
 
-  return prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx) => {
     const existing = await tx.deliveryNote.findUnique({ where: { id }, include: { items: true } });
     if (!existing) throw new Error("Delivery note not found");
 

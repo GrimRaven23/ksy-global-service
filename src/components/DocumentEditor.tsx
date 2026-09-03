@@ -102,7 +102,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
           clientPhone: existing.customerPhone || existing.customer?.phone || "",
           clientEmail: existing.customerEmail || existing.customer?.email || "",
           clientAddr: existing.customerAddr || existing.customer?.address || "",
-          products: existing.items?.map((item: any) => ({
+          products: existing.items?.map((item: { designation: string; quantity: number | string; unitPrice: number | string }) => ({
             designation: item.designation,
             quantity: String(item.quantity),
             price: String(item.unitPrice),
@@ -502,6 +502,7 @@ function DocumentPrintTemplate({
       <div className="hdr">
         <div className="hdr-l">
           <div className="brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/logo.jpeg" alt="KSY" className="logo-img" />
           </div>
           <div className="contact">
@@ -532,6 +533,7 @@ function DocumentPrintTemplate({
           {company.ifu && <div className="idr"><span className="idk">IFU : </span>{esc(company.ifu)}</div>}
         </div>
         <div className="ids-c">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/cachet.jpeg" alt="" style={{ height: 40, opacity: 0.55 }} />
         </div>
         <div className="ids-r">
@@ -600,6 +602,7 @@ function DocumentPrintTemplate({
       {/* Signature */}
       <div className="sig">
         <div className="stamp-wrap">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/cachet.jpeg" alt="Cachet" className="stamp-img" />
         </div>
         <div className="sig-txt">

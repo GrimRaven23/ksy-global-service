@@ -10,7 +10,7 @@ interface AuditEvent {
   entityType: string;
   entityId: string | null;
   entityNum: string | null;
-  details: any;
+  details: Record<string, unknown> | null;
   createdAt: string;
   user?: { id: string; name: string; email: string } | null;
 }

@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import type { SessionUser } from "@/lib/types";
+import type { SessionUser, Permission } from "@/lib/types";
 import { ROLE_PERMISSIONS } from "@/lib/types";
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
@@ -76,5 +76,5 @@ export async function requireAuth(): Promise<SessionUser> {
 
 export function hasPermission(userRole: string, permission: string): boolean {
   const perms = ROLE_PERMISSIONS[userRole] || [];
-  return perms.includes(permission as any);
+  return perms.includes(permission as Permission);
 }

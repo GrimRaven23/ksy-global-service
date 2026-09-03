@@ -6,7 +6,8 @@ export async function getCompany(): Promise<CompanySettings | null> {
 }
 
 export async function updateCompany(data: Record<string, unknown>) {
-  const { id, createdAt, updatedAt, documents, deliveryNotes, ...rest } = data as any;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id, createdAt, updatedAt, documents, deliveryNotes, ...rest } = data;
   const allowed = [
     "name", "slogan", "activite", "address", "city", "phone", "phone2",
     "email", "web", "rccm", "ninea", "ifu", "bank", "bkName", "iban",

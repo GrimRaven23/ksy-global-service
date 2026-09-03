@@ -36,18 +36,18 @@ export default function Home() {
     ])
       .then(([me, docs, bl]) => {
         if (me.user) setUser(me.user);
-        const docsArr = (Array.isArray(docs) ? docs : []).map((d: any) => ({
-          id: d.id, num: d.num, type: d.type, date: d.date,
-          total: d.total, status: d.status, createdAt: d.createdAt,
-          clientName: d.customerName || d.customer?.name,
+        const docsArr = (Array.isArray(docs) ? docs : []).map((d: Record<string, unknown>) => ({
+          id: String(d.id), num: String(d.num), type: String(d.type), date: String(d.date),
+          total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
+          clientName: String(d.customerName || ""),
         }));
-        const blArr = (Array.isArray(bl) ? bl : []).map((d: any) => ({
-          id: d.id, num: d.num, type: "BL", date: d.date,
-          total: 0, status: d.status, createdAt: d.createdAt,
-          clientName: d.customerName || d.customer?.name,
+        const blArr = (Array.isArray(bl) ? bl : []).map((d: Record<string, unknown>) => ({
+          id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
+          total: 0, status: String(d.status), createdAt: String(d.createdAt),
+          clientName: String(d.customerName || ""),
         }));
         const all = [...docsArr, ...blArr]
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .sort((a: Doc, b: Doc) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 8);
         setRecentDocs(all);
         setLoading(false);
@@ -78,6 +78,7 @@ export default function Home() {
       {/* Header */}
       <header className="flex items-center justify-between py-4 border-b-2 border-navy mb-8">
         <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/logo.jpeg" alt="KSY" className="h-12 w-auto" />
           <div>
             <h1 className="text-lg font-bold text-navy">KSY GLOBAL SERVICE</h1>

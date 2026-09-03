@@ -29,20 +29,20 @@ export default function DocumentsPage() {
       fetch("/api/delivery").then((r) => r.json()),
     ])
       .then(([pf, df, bl]) => {
-        const pfDocs = (Array.isArray(pf) ? pf : []).map((d: any) => ({
-          id: d.id, num: d.num, type: "PROFORMA", date: d.date,
-          total: d.total, status: d.status, createdAt: d.createdAt,
-          clientName: d.customerName || d.customer?.name,
+        const pfDocs = (Array.isArray(pf) ? pf : []).map((d: Record<string, unknown>) => ({
+          id: String(d.id), num: String(d.num), type: "PROFORMA", date: String(d.date),
+          total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
+          clientName: String(d.customerName || ""),
         }));
-        const dfDocs = (Array.isArray(df) ? df : []).map((d: any) => ({
-          id: d.id, num: d.num, type: "DEFINITIVE", date: d.date,
-          total: d.total, status: d.status, saleMode: d.saleMode, createdAt: d.createdAt,
-          clientName: d.customerName || d.customer?.name,
+        const dfDocs = (Array.isArray(df) ? df : []).map((d: Record<string, unknown>) => ({
+          id: String(d.id), num: String(d.num), type: "DEFINITIVE", date: String(d.date),
+          total: Number(d.total), status: String(d.status), saleMode: String(d.saleMode), createdAt: String(d.createdAt),
+          clientName: String(d.customerName || ""),
         }));
-        const blDocs = (Array.isArray(bl) ? bl : []).map((d: any) => ({
-          id: d.id, num: d.num, type: "BL", date: d.date,
-          total: 0, status: d.status, createdAt: d.createdAt,
-          clientName: d.customerName || d.customer?.name,
+        const blDocs = (Array.isArray(bl) ? bl : []).map((d: Record<string, unknown>) => ({
+          id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
+          total: 0, status: String(d.status), createdAt: String(d.createdAt),
+          clientName: String(d.customerName || ""),
         }));
         const all = [...pfDocs, ...dfDocs, ...blDocs]
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

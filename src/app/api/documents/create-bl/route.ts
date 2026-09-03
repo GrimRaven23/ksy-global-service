@@ -26,12 +26,12 @@ export async function POST(request: NextRequest) {
 
     const note = await createDeliveryNote({
       customerId: sourceDoc.customerId,
-      customerName: sourceDoc.customerName,
-      customerAddr: sourceDoc.customerAddr,
-      customerPhone: sourceDoc.customerPhone,
-      customerEmail: sourceDoc.customerEmail,
+      customerName: sourceDoc.customerName ?? undefined,
+      customerAddr: sourceDoc.customerAddr ?? undefined,
+      customerPhone: sourceDoc.customerPhone ?? undefined,
+      customerEmail: sourceDoc.customerEmail ?? undefined,
       documentId: sourceDoc.id,
-      orderRef: sourceDoc.ref,
+      orderRef: sourceDoc.ref ?? undefined,
       items: sourceDoc.items.map((item) => ({
         designation: item.designation,
         quantity: Number(item.quantity),
@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(note, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("POST /api/documents/create-bl error:", error);
-    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
   }
 }

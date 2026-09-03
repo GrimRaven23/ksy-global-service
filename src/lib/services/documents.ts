@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { snapshotCompany } from "./company";
-import type { AuditAction } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 
 function nextNum(seqType: string, year: number): string {
   const prefix = seqType === "PROFORMA" ? "PF" : "FAC";
   return `${prefix}-${year}-`;
 }
 
-async function getNextNumber(tx: any, type: "PROFORMA" | "DEFINITIVE"): Promise<string> {
+async function getNextNumber(tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>, type: "PROFORMA" | "DEFINITIVE"): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = nextNum(type, year);
   const seq = await tx.documentSequence.upsert({
@@ -60,7 +60,7 @@ export async function createDocument(data: {
   const tvaAmount = tvaOn ? Math.round(subtotal * tvaRate) / 100 : 0;
   const total = subtotal + tvaAmount;
 
-  return prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx) => {
     const num = await getNextNumber(tx, data.type);
 
     const doc = await tx.document.create({
@@ -109,7 +109,7 @@ export async function updateDocument(id: string, data: Record<string, unknown>) 
   if (data.customerPhone !== undefined) customerSnap.customerPhone = data.customerPhone as string;
   if (data.customerEmail !== undefined) customerSnap.customerEmail = data.customerEmail as string;
 
-  return prisma.$transaction(async (tx: any) => {
+  return prisma.$transaction(async (tx) => {
     const existing = await tx.document.findUnique({ where: { id }, include: { items: true } });
     if (!existing) throw new Error("Document not found");
 
@@ -141,7 +141,7 @@ export async function updateDocument(id: string, data: Record<string, unknown>) 
     const items = data.items && Array.isArray(data.items)
       ? (data.items as { designation: string; quantity: number; unitPrice: number }[])
       : existing.items;
-    const subtotal = items.reduce((s: number, i: any) => s + (Number(i.quantity) * Number(i.unitPrice)), 0);
+    const subtotal = items.reduce((s: number, i: { quantity: number | string | unknown; unitPrice: number | string | unknown }) => s + (Number(i.quantity) * Number(i.unitPrice)), 0);
     const tvaOn = (data.tvaOn !== undefined ? data.tvaOn : existing.tvaOn) as boolean;
     const tvaRate = (data.tvaRate !== undefined ? data.tvaRate : Number(existing.tvaRate)) as number;
     const tvaAmount = tvaOn ? Math.round(subtotal * tvaRate) / 100 : 0;

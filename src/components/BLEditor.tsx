@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
-import { fmtDate, fmtNum, todayStr, esc, curYear, padN } from "@/lib/utils";
+import { fmtDate, todayStr, esc, curYear, padN } from "@/lib/utils";
 import { SectionTitle, Field } from "@/components/ui";
 
 interface BLProduct {
@@ -99,7 +99,7 @@ export default function BLEditor() {
           clientAddr: existing.customerAddr || existing.customer?.address || "",
           driver: existing.driverName || "",
           driverPhone: existing.driverPhone || "",
-          products: existing.items?.map((item: any) => ({
+          products: existing.items?.map((item: { designation: string; quantity: number | string; observation?: string | null }) => ({
             designation: item.designation,
             quantity: String(item.quantity),
             observation: item.observation || "",
@@ -232,7 +232,10 @@ export default function BLEditor() {
 
       <div className="hdr">
         <div className="hdr-l">
-          <div className="brand"><img src="/images/logo.jpeg" alt="KSY" className="logo-img" /></div>
+          <div className="brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo.jpeg" alt="KSY" className="logo-img" />
+          </div>
           <div className="contact">
             {company.name && <strong>{esc(company.name)}</strong>}
             {company.slogan && <><br /><em>{esc(company.slogan)}</em></>}
@@ -256,7 +259,10 @@ export default function BLEditor() {
           <div className="idr"><span className="idk">RCCM : </span>{esc(company.rccm)}</div>
           <div className="idr"><span className="idk">NINEA : </span>{esc(company.ninea)}</div>
         </div>
-        <div className="ids-c"><img src="/images/cachet.jpeg" alt="" style={{ height: 40, opacity: 0.55 }} /></div>
+        <div className="ids-c">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/cachet.jpeg" alt="" style={{ height: 40, opacity: 0.55 }} />
+        </div>
         <div className="ids-r">
           <div className="idr"><span className="idk">Banque : </span>{esc(company.bank)}</div>
           <div className="idr"><span className="idk">IBAN : </span>{esc(company.iban)}</div>

@@ -41,6 +41,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/logo.jpeg" alt="KSY Global Service" className="h-20 mx-auto mb-3" />
           <h1 className="text-xl font-bold text-navy">KSY GLOBAL SERVICE</h1>
           <p className="text-xs text-txt2 mt-1">KNOWLEDGE &bull; SERVICE &bull; YIELD</p>

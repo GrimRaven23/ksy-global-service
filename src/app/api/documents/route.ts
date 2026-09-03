@@ -40,7 +40,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const doc = await createDocument({ ...parsed.data, userId: user.id });
+    const doc = await createDocument({
+      ...parsed.data,
+      userId: user.id,
+      ref: parsed.data.ref ?? undefined,
+      customerId: parsed.data.customerId ?? undefined,
+      validity: parsed.data.validity ?? undefined,
+    });
 
     await createAuditEvent({
       action: "DOCUMENT_CREATED",
@@ -52,9 +58,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(doc, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("POST /api/documents error:", error);
-    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
   }
 }
 
@@ -87,9 +93,9 @@ export async function PUT(request: NextRequest) {
     });
 
     return NextResponse.json(doc);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("PUT /api/documents error:", error);
-    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
   }
 }
 
@@ -116,8 +122,8 @@ export async function DELETE(request: NextRequest) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("DELETE /api/documents error:", error);
-    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
   }
 }

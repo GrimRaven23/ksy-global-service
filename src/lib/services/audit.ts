@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export async function createAuditEvent(data: {
   action: string;
@@ -13,7 +14,7 @@ export async function createAuditEvent(data: {
       entityType: data.entityType,
       entityId: data.entityId,
       entityNum: data.entityNum,
-      details: data.details || undefined,
+      details: (data.details as Prisma.InputJsonValue) ?? undefined,
     },
   });
 }

@@ -32,7 +32,12 @@ jobs:
       - name: ESLint
         run: npx eslint .
 
+      - name: Security audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - name: Build
         run: npm run build
         env:
           DATABASE_URL: "postgresql://user:pass@localhost:5432/test"
+          SESSION_SECRET: "ci-test-secret-do-not-use-in-production"

@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPANY SETTINGS
+// ═══════════════════════════════════════════════════════════════
+model CompanySettings {
+  id            String   @id @default("company_main")
+  name          String   @default("KSY GLOBAL SERVICE")
+  slogan        String   @default("KNOWLEDGE • SERVICE • YIELD")
+  activite      String   @default("Fourniture de consommables & services associés")
+  address       String?
+  city          String?  @default("Dakar, Sénégal")
+  phone         String?
+  phone2        String?
+  email         String?
+  web           String?
+  rccm          String?
+  ninea         String?
+  ifu           String?
+  bank          String?
+  bkName        String?  @map("bk_name")
+  iban          String?
+  swift         String?
+  compte        String?
+  tvaDefault    String   @default("non") @map("tva_default")
+  tvaRate       Float    @default(18) @map("tva_rate")
+  currency      String   @default("XOF")
+  logoUrl       String?  @map("logo_url")
+  cachetUrl     String?  @map("cachet_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  documents      Document[]
+  deliveryNotes  DeliveryNote[]
+
+  @@map("company_settings")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CUSTOMERS
+// ═══════════════════════════════════════════════════════════════
+model Customer {
+  id            String   @id @default(cuid())
+  name          String
+  address       String?
+  phone         String?
+  email         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  documents      Document[]
+  deliveryNotes  DeliveryNote[]
+
+  @@map("customers")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENTS (Pro Forma + Définitive)
+// ═══════════════════════════════════════════════════════════════
+enum DocumentType {
+  PROFORMA
+  DEFINITIVE
+}
+
+enum SaleMode {
+  DIRECTE
+  LIVRAISON
+}
+
+enum DocumentStatus {
+  DRAFT
+  FINALIZED
+  PRINTED
+}
+
+model Document {
+  id            String         @id @default(cuid())
+  type          DocumentType
+  num           String         @unique
+  date          DateTime       @default(now())
+  validity      DateTime?
+  ref           String?        @map("order_ref")
+  saleMode      SaleMode       @default(DIRECTE) @map("sale_mode")
+  status        DocumentStatus @default(DRAFT)
+  tvaOn         Boolean        @default(false) @map("tva_on")
+  tvaRate       Float          @default(18) @map("tva_rate")
+  subtotal      Float          @default(0)
+  tvaAmount     Float          @default(0) @map("tva_amount")
+  total         Float          @default(0)
+  wordsValue    String?        @map("words_value")
+
+  customerId    String?        @map("customer_id")
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+
+  companyId     String         @default("company_main") @map("company_id")
+  company       CompanySettings @relation(fields: [companyId], references: [id])
+
+  // Company snapshot at time of finalization (historical integrity)
+  companyName   String?        @map("company_name_snapshot")
+  companyAddr   String?        @map("company_addr_snapshot")
+  companyCity   String?        @map("company_city_snapshot")
+  companyPhone  String?        @map("company_phone_snapshot")
+  companyRccm   String?        @map("company_rccm_snapshot")
+  companyNinea  String?        @map("company_ninea_snapshot")
+  companyIban   String?        @map("company_iban_snapshot")
+
+  items         DocumentItem[]
+  deliveryNotes DeliveryNote[]
+
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([status])
+  @@index([date])
+  @@map("documents")
+}
+
+model DocumentItem {
+  id            String   @id @default(cuid())
+  designation   String
+  quantity      Float    @default(0)
+  unitPrice     Float    @default(0) @map("unit_price")
+  total         Float    @default(0)
+  sortOrder     Int      @default(0) @map("sort_order")
+
+  documentId    String   @map("document_id")
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("document_items")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DELIVERY NOTES (Bon de Livraison)
+// ═══════════════════════════════════════════════════════════════
+model DeliveryNote {
+  id            String         @id @default(cuid())
+  num           String         @unique
+  date          DateTime       @default(now())
+  observations  String?
+  status        DocumentStatus @default(DRAFT)
+
+  driverName    String?        @map("driver_name")
+  driverPhone   String?        @map("driver_phone")
+
+  customerId    String?        @map("customer_id")
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+
+  documentId    String?        @map("document_id")
+  document      Document?      @relation(fields: [documentId], references: [id])
+
+  companyId     String         @default("company_main") @map("company_id")
+  company       CompanySettings @relation(fields: [companyId], references: [id])
+
+  // Company snapshot
+  companyName   String?        @map("company_name_snapshot")
+  companyAddr   String?        @map("company_addr_snapshot")
+  companyCity   String?        @map("company_city_snapshot")
+  companyPhone  String?        @map("company_phone_snapshot")
+  companyRccm   String?        @map("company_rccm_snapshot")
+
+  items         DeliveryNoteItem[]
+
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@map("delivery_notes")
+}
+
+model DeliveryNoteItem {
+  id            String       @id @default(cuid())
+  designation   String
+  quantity      Float        @default(0)
+  observation   String?
+  sortOrder     Int          @default(0) @map("sort_order")
+
+  deliveryNoteId String     @map("delivery_note_id")
+  deliveryNote   DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([deliveryNoteId])
+  @@map("delivery_note_items")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUDIT EVENTS
+// ═══════════════════════════════════════════════════════════════
+enum AuditAction {
+  COMPANY_SETTINGS_UPDATED
+  DOCUMENT_CREATED
+  DOCUMENT_UPDATED
+  DOCUMENT_PRINTED
+  DOCUMENT_FINALIZED
+  DOCUMENT_DELETED
+  DELIVERY_NOTE_CREATED
+  DELIVERY_NOTE_UPDATED
+  DELIVERY_NOTE_PRINTED
+  DELIVERY_NOTE_DELETED
+}
+
+model AuditEvent {
+  id            String      @id @default(cuid())
+  action        AuditAction
+  entityType    String      @map("entity_type")
+  entityId      String?     @map("entity_id")
+  entityNum     String?     @map("entity_num")
+  details       Json?
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_events")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENT SEQUENCES (auto-numbering)
+// ═══════════════════════════════════════════════════════════════
+model DocumentSequence {
+  id            String   @id @default(cuid())
+  type          String
+  year          Int
+  nextNumber    Int      @default(1) @map("next_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([type, year])
+  @@map("document_sequences")
+}

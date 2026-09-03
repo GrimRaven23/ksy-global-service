@@ -1,66 +1,116 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createDeliveryNote,
-  listDeliveryNotes,
-  getDeliveryNote,
-  updateDeliveryNote,
-  deleteDeliveryNote,
-} from "@/lib/services/delivery";
+import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { deliveryCreateSchema, deliveryUpdateSchema } from "@/lib/validation";
+import { createDeliveryNote, updateDeliveryNote, listDeliveryNotes, deleteDeliveryNote } from "@/lib/services/delivery";
+import { createAuditEvent } from "@/lib/services/audit";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (id) {
-      const note = await getDeliveryNote(id);
-      if (!note) return NextResponse.json({ error: "Bon non trouvé" }, { status: 404 });
-      return NextResponse.json(note);
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!hasPermission(user.role, "delivery.read")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
     const notes = await listDeliveryNotes();
     return NextResponse.json(notes);
   } catch (error) {
+    console.error("GET /api/delivery error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const note = await createDeliveryNote(body);
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!hasPermission(user.role, "delivery.create")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const parsed = deliveryCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const note = await createDeliveryNote({ ...parsed.data, userId: user.id });
+
+    await createAuditEvent({
+      action: "DELIVERY_NOTE_CREATED",
+      entityType: "delivery_note",
+      entityId: note.id,
+      entityNum: note.num,
+      userId: user.id,
+    });
+
     return NextResponse.json(note, { status: 201 });
   } catch (error: any) {
-    if (error?.code === "P2002") {
-      return NextResponse.json({ error: "Ce numéro existe déjà" }, { status: 409 });
+    console.error("POST /api/delivery error:", error);
+    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!hasPermission(user.role, "delivery.update")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
-  }
-}
 
-export async function PUT(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
-    const body = await req.json();
-    const note = await updateDeliveryNote(id, body);
+    const body = await request.json();
+    const parsed = deliveryUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const note = await updateDeliveryNote(id, parsed.data);
+
+    await createAuditEvent({
+      action: "DELIVERY_NOTE_UPDATED",
+      entityType: "delivery_note",
+      entityId: note.id,
+      entityNum: note.num,
+      userId: user.id,
+    });
+
     return NextResponse.json(note);
-  } catch (error) {
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  } catch (error: any) {
+    console.error("PUT /api/delivery error:", error);
+    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!hasPermission(user.role, "delivery.delete")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
-    await deleteDeliveryNote(id);
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    const note = await deleteDeliveryNote(id);
+
+    await createAuditEvent({
+      action: "DELIVERY_NOTE_DELETED",
+      entityType: "delivery_note",
+      entityId: note.id,
+      entityNum: note.num,
+      userId: user.id,
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    console.error("DELETE /api/delivery error:", error);
+    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
   }
 }

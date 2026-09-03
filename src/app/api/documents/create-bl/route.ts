@@ -1,32 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDocument } from "@/lib/services/documents";
+import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { createBLFromDocSchema } from "@/lib/validation";
 import { createDeliveryNote } from "@/lib/services/delivery";
+import { getDocument } from "@/lib/services/documents";
+import { createAuditEvent } from "@/lib/services/audit";
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { documentId } = await req.json();
-    if (!documentId) {
-      return NextResponse.json({ error: "documentId requis" }, { status: 400 });
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!hasPermission(user.role, "delivery.create")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const doc = await getDocument(documentId);
-    if (!doc) {
-      return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
+    const body = await request.json();
+    const parsed = createBLFromDocSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "ID document requis" }, { status: 400 });
     }
 
-    const bl = await createDeliveryNote({
-      ref: doc.num,
-      customerId: doc.customerId || undefined,
-      documentId: doc.id,
-      items: doc.items.map((item) => ({
+    const sourceDoc = await getDocument(parsed.data.documentId);
+    if (!sourceDoc) {
+      return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
+    }
+
+    const note = await createDeliveryNote({
+      customerId: sourceDoc.customerId,
+      customerName: sourceDoc.customerName,
+      customerAddr: sourceDoc.customerAddr,
+      customerPhone: sourceDoc.customerPhone,
+      customerEmail: sourceDoc.customerEmail,
+      documentId: sourceDoc.id,
+      orderRef: sourceDoc.ref,
+      items: sourceDoc.items.map((item) => ({
         designation: item.designation,
-        quantity: item.quantity,
+        quantity: Number(item.quantity),
         observation: "",
       })),
+      userId: user.id,
     });
 
-    return NextResponse.json(bl, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    await createAuditEvent({
+      action: "DELIVERY_NOTE_CREATED",
+      entityType: "delivery_note",
+      entityId: note.id,
+      entityNum: note.num,
+      userId: user.id,
+      details: { sourceDocumentId: sourceDoc.id, sourceDocumentNum: sourceDoc.num },
+    });
+
+    return NextResponse.json(note, { status: 201 });
+  } catch (error: any) {
+    console.error("POST /api/documents/create-bl error:", error);
+    return NextResponse.json({ error: error.message || "Erreur serveur" }, { status: 500 });
   }
 }

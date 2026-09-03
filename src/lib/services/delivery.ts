@@ -1,115 +1,119 @@
 import { prisma } from "@/lib/prisma";
-import { curYear, padN } from "@/lib/utils";
-import { snapshotCompany, getCompany } from "./company";
-import { createAuditEvent } from "./audit";
+import { snapshotCompany } from "./company";
 
-export async function createDeliveryNote(data: {
-  num?: string;
-  date?: Date;
-  ref?: string;
-  driverName?: string;
-  driverPhone?: string;
-  customerId?: string;
-  documentId?: string;
-  observations?: string;
-  items?: { designation: string; quantity: number; observation?: string }[];
-}) {
-  const company = await getCompany();
-  const num = data.num || (await getNextBLNumber());
-
-  const doc = await prisma.deliveryNote.create({
-    data: {
-      num,
-      date: data.date || new Date(),
-      driverName: data.driverName,
-      driverPhone: data.driverPhone,
-      observations: data.observations,
-      customerId: data.customerId,
-      documentId: data.documentId,
-      companyId: "company_main",
-      companyName: company.name,
-      companyAddr: company.address,
-      companyCity: company.city,
-      companyPhone: company.phone,
-      companyRccm: company.rccm,
-      items: {
-        create: (data.items || []).map((item, i) => ({
-          designation: item.designation,
-          quantity: item.quantity,
-          observation: item.observation,
-          sortOrder: i,
-        })),
-      },
-    },
-    include: { items: true, customer: true, document: true },
+async function getNextBLNumber(tx: any): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `BL-${year}-`;
+  const seq = await tx.documentSequence.upsert({
+    where: { type_year: { type: "DELIVERY", year } },
+    update: { nextNumber: { increment: 1 } },
+    create: { type: "DELIVERY", year, nextNumber: 1 },
   });
-
-  await createAuditEvent({
-    action: "DELIVERY_NOTE_CREATED",
-    entityType: "DELIVERY_NOTE",
-    entityId: doc.id,
-    entityNum: doc.num,
-  });
-
-  return doc;
+  const num = String(seq.nextNumber).padStart(3, "0");
+  return `${prefix}${num}`;
 }
 
-export async function updateDeliveryNote(
-  id: string,
-  data: {
-    num?: string;
-    date?: Date;
-    ref?: string;
-    driverName?: string;
-    driverPhone?: string;
-    customerId?: string;
-    status?: string;
-    observations?: string;
-    items?: { designation: string; quantity: number; observation?: string; sortOrder: number }[];
-  }
-) {
-  const company = await getCompany();
-  const updateData: any = {
-    ...(data.num !== undefined && { num: data.num }),
-    ...(data.date !== undefined && { date: data.date }),
-    ...(data.driverName !== undefined && { driverName: data.driverName }),
-    ...(data.driverPhone !== undefined && { driverPhone: data.driverPhone }),
-    ...(data.customerId !== undefined && { customerId: data.customerId }),
-    ...(data.status !== undefined && { status: data.status }),
-    ...(data.observations !== undefined && { observations: data.observations }),
-    companyName: company.name,
-    companyAddr: company.address,
-    companyCity: company.city,
-    companyPhone: company.phone,
-    companyRccm: company.rccm,
+export async function createDeliveryNote(data: {
+  date?: string;
+  observations?: string;
+  driverName?: string;
+  driverPhone?: string;
+  orderRef?: string;
+  customerId?: string | null;
+  customerName?: string;
+  customerAddr?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  documentId?: string | null;
+  items: { designation: string; quantity: number; observation?: string; sortOrder?: number }[];
+  userId?: string;
+}) {
+  const company = await prisma.companySettings.findUnique({ where: { id: "company_main" } });
+  if (!company) throw new Error("Company settings not found");
+
+  const companySnap = snapshotCompany(company);
+  const customerSnap = {
+    customerName: data.customerName || null,
+    customerAddr: data.customerAddr || null,
+    customerPhone: data.customerPhone || null,
+    customerEmail: data.customerEmail || null,
   };
 
-  if (data.items) {
-    await prisma.deliveryNoteItem.deleteMany({ where: { deliveryNoteId: id } });
-    updateData.items = {
-      create: data.items.map((item) => ({
-        designation: item.designation,
-        quantity: item.quantity,
-        observation: item.observation,
-        sortOrder: item.sortOrder,
-      })),
-    };
-  }
+  return prisma.$transaction(async (tx: any) => {
+    const num = await getNextBLNumber(tx);
 
-  const doc = await prisma.deliveryNote.update({
-    where: { id },
-    data: updateData,
-    include: { items: true, customer: true },
+    const doc = await tx.deliveryNote.create({
+      data: {
+        num,
+        date: data.date ? new Date(data.date) : new Date(),
+        observations: data.observations || null,
+        driverName: data.driverName || null,
+        driverPhone: data.driverPhone || null,
+        orderRef: data.orderRef || null,
+        customerId: data.customerId || null,
+        documentId: data.documentId || null,
+        ...companySnap,
+        ...customerSnap,
+        createdBy: data.userId || null,
+        items: {
+          create: data.items.map((item, i) => ({
+            designation: item.designation,
+            quantity: item.quantity,
+            observation: item.observation || null,
+            sortOrder: item.sortOrder ?? i,
+          })),
+        },
+      },
+      include: { items: true, customer: true, document: true },
+    });
+
+    return doc;
   });
+}
 
-  await createAuditEvent({
-    action: "DELIVERY_NOTE_UPDATED",
-    entityType: "DELIVERY_NOTE",
-    entityId: doc.id,
-    entityNum: doc.num,
+export async function updateDeliveryNote(id: string, data: Record<string, unknown>) {
+  const company = await prisma.companySettings.findUnique({ where: { id: "company_main" } });
+  if (!company) throw new Error("Company settings not found");
+
+  const companySnap = snapshotCompany(company);
+  const customerSnap: Record<string, string | null> = {};
+  if (data.customerName !== undefined) customerSnap.customerName = data.customerName as string;
+  if (data.customerAddr !== undefined) customerSnap.customerAddr = data.customerAddr as string;
+  if (data.customerPhone !== undefined) customerSnap.customerPhone = data.customerPhone as string;
+  if (data.customerEmail !== undefined) customerSnap.customerEmail = data.customerEmail as string;
+
+  return prisma.$transaction(async (tx: any) => {
+    const existing = await tx.deliveryNote.findUnique({ where: { id }, include: { items: true } });
+    if (!existing) throw new Error("Delivery note not found");
+
+    const updateData: Record<string, unknown> = { ...companySnap, ...customerSnap };
+    if (data.date !== undefined) updateData.date = new Date(data.date as string);
+    if (data.observations !== undefined) updateData.observations = data.observations as string;
+    if (data.driverName !== undefined) updateData.driverName = data.driverName as string;
+    if (data.driverPhone !== undefined) updateData.driverPhone = data.driverPhone as string;
+    if (data.orderRef !== undefined) updateData.orderRef = data.orderRef as string;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.customerId !== undefined) updateData.customerId = data.customerId as string | null;
+
+    if (data.items && Array.isArray(data.items)) {
+      await tx.deliveryNoteItem.deleteMany({ where: { deliveryNoteId: id } });
+      const items = data.items as { designation: string; quantity: number; observation?: string; sortOrder?: number }[];
+      updateData.items = {
+        create: items.map((item, i) => ({
+          designation: item.designation,
+          quantity: item.quantity,
+          observation: item.observation || null,
+          sortOrder: item.sortOrder ?? i,
+        })),
+      };
+    }
+
+    return tx.deliveryNote.update({
+      where: { id },
+      data: updateData,
+      include: { items: true, customer: true, document: true },
+    });
   });
-
-  return doc;
 }
 
 export async function getDeliveryNote(id: string) {
@@ -121,31 +125,12 @@ export async function getDeliveryNote(id: string) {
 
 export async function listDeliveryNotes() {
   return prisma.deliveryNote.findMany({
-    include: { items: true, customer: true },
     orderBy: { createdAt: "desc" },
+    include: { items: true, customer: true, document: true },
+    take: 100,
   });
 }
 
 export async function deleteDeliveryNote(id: string) {
-  const doc = await prisma.deliveryNote.findUnique({ where: { id } });
-  if (!doc) return;
-
-  await prisma.deliveryNote.delete({ where: { id } });
-
-  await createAuditEvent({
-    action: "DELIVERY_NOTE_DELETED",
-    entityType: "DELIVERY_NOTE",
-    entityId: doc.id,
-    entityNum: doc.num,
-  });
-}
-
-async function getNextBLNumber(): Promise<string> {
-  const year = curYear();
-  const seq = await prisma.documentSequence.upsert({
-    where: { type_year: { type: "DELIVERY", year } },
-    create: { type: "DELIVERY", year, nextNumber: 2 },
-    update: { nextNumber: { increment: 1 } },
-  });
-  return `BL-${year}-${padN(seq.nextNumber - 1)}`;
+  return prisma.deliveryNote.delete({ where: { id } });
 }

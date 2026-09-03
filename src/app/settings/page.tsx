@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
+import { Card, SectionTitle, Field } from "@/components/ui";
 
 interface Company {
   name: string;
@@ -54,32 +55,41 @@ export default function SettingsPage() {
   const router = useRouter();
   const [company, setCompany] = useState<Company>(DEFAULT);
   const [saving, setSaving] = useState(false);
+  const isDirty = useRef(false);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
-        if (data && !data.error) setCompany({ ...DEFAULT, ...data });
+        if (data && !data.error) {
+          setCompany({ ...DEFAULT, ...data });
+          // Allow auto-save after initial load completes
+          setTimeout(() => { isInitialLoad.current = false; }, 100);
+        }
       })
       .catch(() => {});
   }, []);
 
   const update = (key: keyof Company, value: string | number) => {
+    isDirty.current = true;
     setCompany((prev) => ({ ...prev, [key]: value }));
   };
 
   const autoSave = useDebounce(async (data: Company) => {
+    if (!isDirty.current || isInitialLoad.current) return;
     try {
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      isDirty.current = false;
     } catch {}
   }, 1500);
 
   useEffect(() => {
-    if (company !== DEFAULT) autoSave(company);
+    if (isDirty.current && !isInitialLoad.current) autoSave(company);
   }, [company, autoSave]);
 
   const handleSave = async () => {
@@ -91,6 +101,7 @@ export default function SettingsPage() {
         body: JSON.stringify(company),
       });
       if (res.ok) {
+        isDirty.current = false;
         alert("Paramètres enregistrés !");
       } else {
         alert("Erreur lors de l'enregistrement.");
@@ -123,14 +134,16 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Identité */}
-        <Card title="Identité">
+        <Card>
+          <SectionTitle>Identité</SectionTitle>
           <Field label="Nom de l'entreprise" value={company.name} onChange={(v) => update("name", v)} />
           <Field label="Slogan" value={company.slogan} onChange={(v) => update("slogan", v)} />
           <Field label="Activité" value={company.activite} onChange={(v) => update("activite", v)} />
         </Card>
 
         {/* Coordonnées */}
-        <Card title="Coordonnées">
+        <Card>
+          <SectionTitle>Coordonnées</SectionTitle>
           <Field label="Adresse" value={company.address} onChange={(v) => update("address", v)} />
           <Field label="Ville / Pays" value={company.city} onChange={(v) => update("city", v)} />
           <Field label="Téléphone" value={company.phone} onChange={(v) => update("phone", v)} />
@@ -140,14 +153,16 @@ export default function SettingsPage() {
         </Card>
 
         {/* Identifiants officiels */}
-        <Card title="Identifiants officiels">
+        <Card>
+          <SectionTitle>Identifiants officiels</SectionTitle>
           <Field label="RCCM" value={company.rccm} onChange={(v) => update("rccm", v)} />
           <Field label="NINEA" value={company.ninea} onChange={(v) => update("ninea", v)} />
           <Field label="IFU" value={company.ifu} onChange={(v) => update("ifu", v)} />
         </Card>
 
         {/* Informations bancaires */}
-        <Card title="Informations bancaires">
+        <Card>
+          <SectionTitle>Informations bancaires</SectionTitle>
           <Field label="Banque" value={company.bank} onChange={(v) => update("bank", v)} />
           <Field label="Titulaire" value={company.bkName} onChange={(v) => update("bkName", v)} />
           <Field label="IBAN" value={company.iban} onChange={(v) => update("iban", v)} />
@@ -156,7 +171,8 @@ export default function SettingsPage() {
         </Card>
 
         {/* Paramètres des documents */}
-        <Card title="Paramètres des documents" wide>
+        <Card wide>
+          <SectionTitle>Paramètres des documents</SectionTitle>
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-1">
@@ -164,7 +180,7 @@ export default function SettingsPage() {
               </label>
               <select
                 value={company.tvaDefault}
-                onChange={(e) => update("tvaDefault", e.target.value)}
+                onChange={(e) => { isDirty.current = true; update("tvaDefault", e.target.value); }}
                 className="w-full px-2.5 py-2 border border-bdr rounded text-xs"
               >
                 <option value="non">Non</option>
@@ -180,7 +196,7 @@ export default function SettingsPage() {
                 value={company.tvaRate}
                 min={0}
                 max={100}
-                onChange={(e) => update("tvaRate", parseFloat(e.target.value) || 0)}
+                onChange={(e) => { isDirty.current = true; update("tvaRate", parseFloat(e.target.value) || 0); }}
                 className="w-full px-2.5 py-2 border border-bdr rounded text-xs"
               />
             </div>
@@ -191,7 +207,7 @@ export default function SettingsPage() {
               <input
                 type="text"
                 value={company.currency}
-                onChange={(e) => update("currency", e.target.value)}
+                onChange={(e) => { isDirty.current = true; update("currency", e.target.value); }}
                 className="w-full px-2.5 py-2 border border-bdr rounded text-xs"
               />
             </div>
@@ -199,42 +215,5 @@ export default function SettingsPage() {
         </Card>
       </div>
     </main>
-  );
-}
-
-function Card({ title, children, wide }: { title: string; children: React.ReactNode; wide?: boolean }) {
-  return (
-    <section className={`bg-white border border-bdr rounded-[10px] p-4 ${wide ? "md:col-span-2" : ""}`}>
-      <h2 className="text-[11px] font-bold uppercase tracking-wide text-white bg-navy -mt-4 -mx-4 mb-3.5 px-4 py-2 rounded-t-[10px]">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function Field({
-  label,
-  value,
-  type = "text",
-  onChange,
-}: {
-  label: string;
-  value: string;
-  type?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="mb-2 last:mb-0">
-      <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">
-        {label}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10"
-      />
-    </div>
   );
 }

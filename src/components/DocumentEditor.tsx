@@ -1,18 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
-import {
-  fmtDate,
-  fmtNum,
-  numToWordsFCFA,
-  calcInvoice,
-  todayStr,
-  esc,
-  curYear,
-  padN,
-} from "@/lib/utils";
+import { fmtDate, fmtNum, numToWordsFCFA, calcInvoice, todayStr, esc, curYear, padN } from "@/lib/utils";
+import { Card, SectionTitle, Field } from "@/components/ui";
 
 interface Product {
   designation: string;
@@ -58,7 +50,7 @@ interface Company {
 
 const blankProduct = (): Product => ({ designation: "", quantity: "", price: "" });
 
-function blankDoc(type: string): DocData {
+function blankDoc(): DocData {
   return {
     num: "",
     date: todayStr(),
@@ -77,33 +69,60 @@ function blankDoc(type: string): DocData {
 
 export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
   const router = useRouter();
-  const [doc, setDoc] = useState<DocData>(() => blankDoc(type));
+  const searchParams = useSearchParams();
+  const docId = searchParams.get("id");
+  const [doc, setDoc] = useState<DocData>(() => blankDoc());
   const [company, setCompany] = useState<Company | null>(null);
-  const [nextNum, setNextNum] = useState(1);
   const printRef = useRef<HTMLDivElement>(null);
+  const [printActive, setPrintActive] = useState(false);
+  const isDirty = useRef(false);
+  const isInitialLoad = useRef(true);
 
   const isPF = type === "pf";
   const prefix = isPF ? "PF" : "FAC";
-  const docNum = doc.num || `${prefix}-${curYear()}-${padN(nextNum)}`;
+  const docNum = doc.num || `${prefix}-${curYear()}-${padN(1)}`;
 
   useEffect(() => {
     Promise.all([
       fetch("/api/settings").then((r) => r.json()),
-      fetch(`/api/documents?type=${isPF ? "PROFORMA" : "DEFINITIVE"}`).then((r) => r.json()),
-    ]).then(([comp, docs]) => {
+      docId ? fetch(`/api/documents?id=${docId}`).then((r) => r.json()) : Promise.resolve(null),
+    ]).then(([comp, existing]) => {
       if (comp && !comp.error) setCompany(comp);
-      if (Array.isArray(docs)) setNextNum(docs.length + 1);
+      if (existing && existing.id) {
+        setDoc({
+          id: existing.id,
+          num: existing.num,
+          date: existing.date?.split("T")[0] || todayStr(),
+          validity: existing.validity?.split("T")[0] || "",
+          ref: existing.ref || "",
+          saleMode: (existing.saleMode || "DIRECTE").toLowerCase(),
+          tvaOn: existing.tvaOn,
+          tvaRate: Number(existing.tvaRate) || 18,
+          clientName: existing.customerName || existing.customer?.name || "",
+          clientPhone: existing.customerPhone || existing.customer?.phone || "",
+          clientEmail: existing.customerEmail || existing.customer?.email || "",
+          clientAddr: existing.customerAddr || existing.customer?.address || "",
+          products: existing.items?.map((item: any) => ({
+            designation: item.designation,
+            quantity: String(item.quantity),
+            price: String(item.unitPrice),
+          })) || [blankProduct()],
+        });
+      }
+      setTimeout(() => { isInitialLoad.current = false; }, 100);
     });
-  }, [isPF]);
+  }, [docId, isPF]);
 
   const updateField = useCallback(
-    (field: keyof DocData, value: any) => {
+    (field: keyof DocData, value: string | boolean | number) => {
+      isDirty.current = true;
       setDoc((prev) => ({ ...prev, [field]: value }));
     },
     []
   );
 
   const updateProduct = useCallback((i: number, field: keyof Product, value: string) => {
+    isDirty.current = true;
     setDoc((prev) => {
       const products = [...prev.products];
       products[i] = { ...products[i], [field]: value };
@@ -112,10 +131,12 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
   }, []);
 
   const addProduct = useCallback(() => {
+    isDirty.current = true;
     setDoc((prev) => ({ ...prev, products: [...prev.products, blankProduct()] }));
   }, []);
 
   const removeProduct = useCallback((i: number) => {
+    isDirty.current = true;
     setDoc((prev) => {
       if (prev.products.length <= 1) return prev;
       const products = prev.products.filter((_, idx) => idx !== i);
@@ -132,33 +153,42 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     doc.tvaRate
   );
 
-  const handleSave = async () => {
-    const items = doc.products
+  const buildPayload = (data: DocData) => ({
+    type: isPF ? "PROFORMA" : "DEFINITIVE",
+    date: data.date ? new Date(data.date) : undefined,
+    validity: isPF && data.validity ? new Date(data.validity) : undefined,
+    ref: data.ref || undefined,
+    saleMode: isPF ? undefined : data.saleMode.toUpperCase(),
+    tvaOn: data.tvaOn,
+    tvaRate: data.tvaRate,
+    customerName: data.clientName || undefined,
+    customerAddr: data.clientAddr || undefined,
+    customerPhone: data.clientPhone || undefined,
+    customerEmail: data.clientEmail || undefined,
+    items: data.products
       .filter((p) => p.designation || p.quantity || p.price)
       .map((p) => ({
         designation: p.designation,
         quantity: parseFloat(p.quantity) || 0,
         unitPrice: parseFloat(p.price) || 0,
-      }));
+      })),
+  });
 
-    const payload = {
-      type: isPF ? "PROFORMA" : "DEFINITIVE",
-      date: doc.date ? new Date(doc.date) : undefined,
-      validity: isPF && doc.validity ? new Date(doc.validity) : undefined,
-      ref: doc.ref || undefined,
-      saleMode: isPF ? undefined : doc.saleMode.toUpperCase(),
-      tvaOn: doc.tvaOn,
-      tvaRate: doc.tvaRate,
-      items,
-    };
+  const handleSave = async () => {
+    const payload = buildPayload(doc);
 
     if (doc.id) {
-      await fetch(`/api/documents?id=${doc.id}`, {
+      const res = await fetch(`/api/documents?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      alert(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} sauvegardée !`);
+      if (res.ok) {
+        isDirty.current = false;
+        alert(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} sauvegardée !`);
+      } else {
+        alert("Erreur lors de la sauvegarde.");
+      }
     } else {
       const res = await fetch("/api/documents", {
         method: "POST",
@@ -168,42 +198,35 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       const data = await res.json();
       if (data.id) {
         setDoc((prev) => ({ ...prev, id: data.id, num: data.num }));
-        setNextNum((n) => n + 1);
+        isDirty.current = false;
+        alert(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} créée : ${data.num}`);
+      } else {
+        alert("Erreur lors de la création.");
       }
-      alert(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} créée : ${data.num || docNum}`);
     }
   };
 
   const handlePrint = useCallback(() => {
-    window.print();
+    setPrintActive(true);
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setPrintActive(false), 500);
+    }, 50);
   }, []);
 
   const autoSave = useDebounce(async (documentData: DocData) => {
-    if (!documentData.id) return;
-    const items = documentData.products
-      .filter((p) => p.designation || p.quantity || p.price)
-      .map((p) => ({
-        designation: p.designation,
-        quantity: parseFloat(p.quantity) || 0,
-        unitPrice: parseFloat(p.price) || 0,
-      }));
+    if (!documentData.id || !isDirty.current || isInitialLoad.current) return;
+    const payload = buildPayload(documentData);
     await fetch(`/api/documents?id=${documentData.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: documentData.date ? new Date(documentData.date) : undefined,
-        validity: isPF && documentData.validity ? new Date(documentData.validity) : undefined,
-        ref: documentData.ref || undefined,
-        saleMode: isPF ? undefined : documentData.saleMode.toUpperCase(),
-        tvaOn: documentData.tvaOn,
-        tvaRate: documentData.tvaRate,
-        items,
-      }),
+      body: JSON.stringify(payload),
     });
+    isDirty.current = false;
   }, 1000);
 
   useEffect(() => {
-    if (doc.id) autoSave(doc);
+    if (doc.id && isDirty.current && !isInitialLoad.current) autoSave(doc);
   }, [doc, autoSave]);
 
   const handleCreateBL = async () => {
@@ -219,7 +242,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       });
       const bl = await res.json();
       if (bl.id) {
-        router.push("/bl");
+        router.push(`/bl?id=${bl.id}`);
       } else {
         alert("Erreur lors de la création du BL.");
       }
@@ -230,213 +253,224 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
 
   const handleNew = () => {
     if (!confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.")) return;
-    setDoc(blankDoc(type));
+    setDoc(blankDoc());
+    isDirty.current = false;
+    router.push(isPF ? "/proforma" : "/definitive");
   };
 
   if (!company) return <div className="p-10 text-center text-txt2">Chargement...</div>;
 
   return (
-    <main className="no-print">
-      {/* Nav */}
-      <nav className="flex items-center justify-between flex-wrap gap-2 py-3 border-b-2 border-navy mb-5 sticky top-0 bg-bg z-50 max-w-[1440px] mx-auto px-5">
-        <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-3 py-1.5 rounded hover:bg-navy/5">
-          &#8592; Retour
-        </button>
-        <span className="text-[15px] font-bold text-navy">
-          {isPF ? "Facture Pro Forma" : "Facture Définitive"}
-        </span>
-        <div className="flex items-center gap-2.5">
-          <span className="text-[11px] font-semibold text-gold bg-navy px-3 py-1 rounded text-xs">{docNum}</span>
-          <button onClick={handleNew} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
-            Nouvelle
+    <>
+      <main className="no-print">
+        {/* Nav */}
+        <nav className="flex items-center justify-between flex-wrap gap-2 py-3 border-b-2 border-navy mb-5 sticky top-0 bg-bg z-50 max-w-[1440px] mx-auto px-5">
+          <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-3 py-1.5 rounded hover:bg-navy/5">
+            &#8592; Retour
           </button>
-          <button onClick={handleSave} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
-            Enregistrer
-          </button>
-          <button onClick={handlePrint} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
-            Imprimer
-          </button>
-        </div>
-      </nav>
+          <span className="text-[15px] font-bold text-navy">
+            {isPF ? "Facture Pro Forma" : "Facture Définitive"}
+          </span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-[11px] font-semibold text-gold bg-navy px-3 py-1 rounded text-xs">{docNum}</span>
+            <button onClick={handleNew} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
+              Nouvelle
+            </button>
+            <button onClick={handleSave} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
+              Enregistrer
+            </button>
+            <button onClick={handlePrint} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
+              Imprimer
+            </button>
+          </div>
+        </nav>
 
-      <div className="max-w-[1440px] mx-auto px-5 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-        {/* Editor panel */}
-        <div className="flex flex-col gap-3.5">
-          {/* Invoice info */}
-          <Card>
-            <SectionTitle>Informations de la facture</SectionTitle>
-            <div className="grid grid-cols-2 gap-2.5">
-              <Field label="N° de facture" value={doc.num} placeholder={isPF ? "PF-2026-001" : "FAC-2026-001"} onChange={(v) => updateField("num", v)} />
-              <Field label="Date d'émission" type="date" value={doc.date} onChange={(v) => updateField("date", v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              {isPF && (
-                <Field label="Date de validité" type="date" value={doc.validity} onChange={(v) => updateField("validity", v)} />
-              )}
-              <Field label="Référence commande" value={doc.ref} placeholder="REF-2026/001" onChange={(v) => updateField("ref", v)} />
-              {!isPF && (
-                <div>
-                  <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">Mode de vente</label>
-                  <select
-                    value={doc.saleMode}
-                    onChange={(e) => updateField("saleMode", e.target.value)}
-                    className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy"
-                  >
-                    <option value="directe">Vente directe</option>
-                    <option value="livraison">Livraison</option>
-                  </select>
+        <div className="max-w-[1440px] mx-auto px-5 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          {/* Editor panel */}
+          <div className="flex flex-col gap-3.5">
+            {/* Invoice info */}
+            <Card>
+              <SectionTitle>Informations de la facture</SectionTitle>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Field label="N° de facture" value={doc.num} placeholder={isPF ? "PF-2026-001" : "FAC-2026-001"} onChange={(v) => updateField("num", v)} />
+                <Field label="Date d'émission" type="date" value={doc.date} onChange={(v) => updateField("date", v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {isPF && (
+                  <Field label="Date de validité" type="date" value={doc.validity} onChange={(v) => updateField("validity", v)} />
+                )}
+                <Field label="Référence commande" value={doc.ref} placeholder="REF-2026/001" onChange={(v) => updateField("ref", v)} />
+                {!isPF && (
+                  <div className="mb-2 last:mb-0">
+                    <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">Mode de vente</label>
+                    <select
+                      value={doc.saleMode}
+                      onChange={(e) => updateField("saleMode", e.target.value)}
+                      className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy"
+                    >
+                      <option value="directe">Vente directe</option>
+                      <option value="livraison">Livraison</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Client */}
+            <Card>
+              <SectionTitle>Client</SectionTitle>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} />
+                <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Field label="Email" type="email" value={doc.clientEmail} placeholder="client@example.com" onChange={(v) => updateField("clientEmail", v)} />
+                <Field label="Adresse" value={doc.clientAddr} placeholder="Adresse du client" onChange={(v) => updateField("clientAddr", v)} />
+              </div>
+            </Card>
+
+            {/* Products */}
+            <Card>
+              <div className="flex items-center justify-between -mt-4 -mx-4 mb-3.5 px-4 py-2 bg-navy rounded-t-[10px]">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-white">Articles</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-white uppercase">TVA</span>
+                  <label className="relative inline-block w-9 h-5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={doc.tvaOn}
+                      onChange={(e) => updateField("tvaOn", e.target.checked)}
+                      className="sr-only"
+                    />
+                    <span className={`absolute inset-0 rounded-full transition-colors ${doc.tvaOn ? "bg-gold" : "bg-gray-400"}`} />
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${doc.tvaOn ? "translate-x-4" : ""}`} />
+                  </label>
+                </div>
+              </div>
+
+              {doc.tvaOn && (
+                <div className="flex items-center gap-2 mb-2.5 px-3 py-2 bg-gold-bg border border-gold rounded text-xs">
+                  <label className="font-semibold text-navy whitespace-nowrap">Taux TVA (%)</label>
+                  <input
+                    type="number"
+                    value={doc.tvaRate}
+                    min={0}
+                    max={100}
+                    onChange={(e) => updateField("tvaRate", parseFloat(e.target.value) || 18)}
+                    className="w-16 px-2 py-1 border border-gold rounded text-xs text-center"
+                  />
                 </div>
               )}
-            </div>
-          </Card>
 
-          {/* Client */}
-          <Card>
-            <SectionTitle>Client</SectionTitle>
-            <div className="grid grid-cols-2 gap-2.5">
-              <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} />
-              <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} />
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              <Field label="Email" type="email" value={doc.clientEmail} placeholder="client@example.com" onChange={(v) => updateField("clientEmail", v)} />
-              <Field label="Adresse" value={doc.clientAddr} placeholder="Adresse du client" onChange={(v) => updateField("clientAddr", v)} />
-            </div>
-          </Card>
-
-          {/* Products */}
-          <Card>
-            <div className="flex items-center justify-between -mt-4 -mx-4 mb-3.5 px-4 py-2 bg-navy rounded-t-[10px]">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-white">Articles</span>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-white uppercase">TVA</span>
-                <label className="relative inline-block w-9 h-5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={doc.tvaOn}
-                    onChange={(e) => updateField("tvaOn", e.target.checked)}
-                    className="sr-only"
-                  />
-                  <span className={`absolute inset-0 rounded-full transition-colors ${doc.tvaOn ? "bg-gold" : "bg-gray-400"}`} />
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${doc.tvaOn ? "translate-x-4" : ""}`} />
-                </label>
+              <div className="overflow-x-auto mb-2">
+                <table className="w-full border-collapse text-[11px]">
+                  <thead>
+                    <tr className="bg-navy text-white text-[9px] uppercase tracking-wide">
+                      <th className="w-8 text-center py-1.5 px-1.5">#</th>
+                      <th className="text-left py-1.5 px-1.5 min-w-[150px]">Désignation</th>
+                      <th className="w-20 text-right py-1.5 px-1.5">Qté</th>
+                      <th className="w-24 text-right py-1.5 px-1.5">Prix unit. (XOF)</th>
+                      <th className="w-24 text-right py-1.5 px-1.5">Total (XOF)</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {doc.products.map((p, i) => {
+                      const q = parseFloat(p.quantity) || 0;
+                      const pr = parseFloat(p.price) || 0;
+                      const lineTotal = q * pr;
+                      return (
+                        <tr key={i} className="border-b border-bdr/50">
+                          <td className="text-center py-1.5 px-1.5 font-semibold text-navy">{i + 1}</td>
+                          <td className="py-1.5 px-1.5">
+                            <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" className="w-full px-1.5 py-1 border border-bdr rounded text-[11px]" />
+                          </td>
+                          <td className="py-1.5 px-1.5">
+                            <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right" />
+                          </td>
+                          <td className="py-1.5 px-1.5">
+                            <input type="number" value={p.price} min={0} onChange={(e) => updateProduct(i, "price", e.target.value)} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right" />
+                          </td>
+                          <td className="text-right py-1.5 px-1.5 font-semibold text-navy whitespace-nowrap">
+                            {fmtNum(lineTotal)} F
+                          </td>
+                          <td className="py-1.5 px-1.5">
+                            <button
+                              onClick={() => removeProduct(i)}
+                              className="bg-transparent border-none text-red cursor-pointer text-base p-0.5 rounded hover:bg-red/10"
+                              title="Supprimer"
+                            >
+                              &times;
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
+              <button onClick={addProduct} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors">
+                + Ajouter un produit
+              </button>
+
+              {/* Totals display */}
+              <div className="mt-3 border border-bdr rounded-md overflow-hidden">
+                <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50">
+                  <span className="font-medium text-txt2">Sous-total</span>
+                  <span className="font-bold text-navy">{fmtNum(calc.subtotal)} F</span>
+                </div>
+                {doc.tvaOn && (
+                  <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50 bg-gray-50">
+                    <span className="font-medium text-txt2">TVA ({calc.rate}%)</span>
+                    <span className="font-bold text-navy">{fmtNum(calc.tva)} F</span>
+                  </div>
+                )}
+                <div className="flex justify-between px-3 py-2.5 text-[13px] bg-navy font-bold">
+                  <span className="text-gold-lt">Total TTC</span>
+                  <span className="text-gold-lt">{fmtNum(calc.total)} F</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Words preview */}
+            <div className="px-3.5 py-2.5 bg-gold-bg border border-gold rounded-md text-[11px]">
+              <span className="font-medium text-txt2 italic">Arrêté la présente facture à la somme de :</span>
+              <br />
+              <span className="font-bold text-navy uppercase">{numToWordsFCFA(Math.round(calc.total))}</span>
             </div>
 
-            {doc.tvaOn && (
-              <div className="flex items-center gap-2 mb-2.5 px-3 py-2 bg-gold-bg border border-gold rounded text-xs">
-                <label className="font-semibold text-navy whitespace-nowrap">Taux TVA (%)</label>
-                <input
-                  type="number"
-                  value={doc.tvaRate}
-                  min={0}
-                  max={100}
-                  onChange={(e) => updateField("tvaRate", parseFloat(e.target.value) || 18)}
-                  className="w-16 px-2 py-1 border border-gold rounded text-xs text-center"
-                />
+            {/* Delivery link for definitive */}
+            {!isPF && doc.saleMode === "livraison" && (
+              <div className="bg-gold-bg border border-gold rounded-[10px] p-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-wide text-navy mb-2">Livraison associée</h3>
+                <p className="text-[11px] text-txt2 mb-3">Ce bon de livraison accompagnera la livraison des marchandises.</p>
+                <button
+                  onClick={handleCreateBL}
+                  className="bg-gold text-navy border-none px-4 py-2 rounded-md text-xs font-bold cursor-pointer hover:bg-[#b89840]"
+                >
+                  Créer un Bon de Livraison
+                </button>
               </div>
             )}
-
-            <div className="overflow-x-auto mb-2">
-              <table className="w-full border-collapse text-[11px]">
-                <thead>
-                  <tr className="bg-navy text-white text-[9px] uppercase tracking-wide">
-                    <th className="w-8 text-center py-1.5 px-1.5">#</th>
-                    <th className="text-left py-1.5 px-1.5 min-w-[150px]">Désignation</th>
-                    <th className="w-20 text-right py-1.5 px-1.5">Qté</th>
-                    <th className="w-24 text-right py-1.5 px-1.5">Prix unit. (XOF)</th>
-                    <th className="w-24 text-right py-1.5 px-1.5">Total (XOF)</th>
-                    <th className="w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {doc.products.map((p, i) => {
-                    const q = parseFloat(p.quantity) || 0;
-                    const pr = parseFloat(p.price) || 0;
-                    const lineTotal = q * pr;
-                    return (
-                      <tr key={i} className="border-b border-bdr/50">
-                        <td className="text-center py-1.5 px-1.5 font-semibold text-navy">{i + 1}</td>
-                        <td className="py-1.5 px-1.5">
-                          <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" className="w-full px-1.5 py-1 border border-bdr rounded text-[11px]" />
-                        </td>
-                        <td className="py-1.5 px-1.5">
-                          <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right" />
-                        </td>
-                        <td className="py-1.5 px-1.5">
-                          <input type="number" value={p.price} min={0} onChange={(e) => updateProduct(i, "price", e.target.value)} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right" />
-                        </td>
-                        <td className="text-right py-1.5 px-1.5 font-semibold text-navy whitespace-nowrap">
-                          {fmtNum(lineTotal)} F
-                        </td>
-                        <td className="py-1.5 px-1.5">
-                          <button
-                            onClick={() => removeProduct(i)}
-                            className="bg-transparent border-none text-red cursor-pointer text-base p-0.5 rounded hover:bg-red/10"
-                            title="Supprimer"
-                          >
-                            &times;
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <button onClick={addProduct} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors">
-              + Ajouter un produit
-            </button>
-
-            {/* Totals display */}
-            <div className="mt-3 border border-bdr rounded-md overflow-hidden">
-              <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50">
-                <span className="font-medium text-txt2">Sous-total</span>
-                <span className="font-bold text-navy">{fmtNum(calc.subtotal)} F</span>
-              </div>
-              {doc.tvaOn && (
-                <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50 bg-gray-50">
-                  <span className="font-medium text-txt2">TVA ({calc.rate}%)</span>
-                  <span className="font-bold text-navy">{fmtNum(calc.tva)} F</span>
-                </div>
-              )}
-              <div className="flex justify-between px-3 py-2.5 text-[13px] bg-navy font-bold">
-                <span className="text-gold-lt">Total TTC</span>
-                <span className="text-gold-lt">{fmtNum(calc.total)} F</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Words preview */}
-          <div className="px-3.5 py-2.5 bg-gold-bg border border-gold rounded-md text-[11px]">
-            <span className="font-medium text-txt2 italic">Arrêté la présente facture à la somme de :</span>
-            <br />
-            <span className="font-bold text-navy uppercase">{numToWordsFCFA(Math.round(calc.total))}</span>
           </div>
 
-          {/* Delivery link for definitive */}
-          {!isPF && doc.saleMode === "livraison" && (
-            <div className="bg-gold-bg border border-gold rounded-[10px] p-4">
-              <h3 className="text-[11px] font-bold uppercase tracking-wide text-navy mb-2">Livraison associée</h3>
-              <p className="text-[11px] text-txt2 mb-3">Ce bon de livraison accompagnera la livraison des marchandises.</p>
-              <button
-                onClick={handleCreateBL}
-                className="bg-gold text-navy border-none px-4 py-2 rounded-md text-xs font-bold cursor-pointer hover:bg-[#b89840]"
-              >
-                Créer un Bon de Livraison
-              </button>
+          {/* Preview panel */}
+          <div className="sticky top-[70px]">
+            <div className="text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-1.5">Aperçu du document</div>
+            <div ref={printRef} className="bg-white border border-bdr rounded shadow-md overflow-hidden">
+              <DocumentPrintTemplate type={type} doc={doc} company={company} calc={calc} docNum={docNum} />
             </div>
-          )}
-        </div>
-
-        {/* Preview panel */}
-        <div className="sticky top-[70px]">
-          <div className="text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-1.5">Aperçu du document</div>
-          <div ref={printRef} className="bg-white border border-bdr rounded shadow-md overflow-hidden">
-            <DocumentPrintTemplate type={type} doc={doc} company={company} calc={calc} docNum={docNum} />
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      {/* Hidden print area */}
+      {printActive && (
+        <div className="print-doc print-active">
+          <DocumentPrintTemplate type={type} doc={doc} company={company} calc={calc} docNum={docNum} />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -481,7 +515,7 @@ function DocumentPrintTemplate({
         </div>
         <div className="hdr-r">
           <div className="doc-title">{isPF ? "FACTURE PRO FORMA" : "FACTURE DÉFINITIVE"}</div>
-          <div className="badge">N° {docNum}</div>
+          <div className="badge">N° {esc(docNum)}</div>
           <div className="dates">
             <div className="dr"><span className="dlbl">Date d&apos;émission : </span>{fmtDate(doc.date)}</div>
             {isPF && doc.validity && <div className="dr"><span className="dlbl">Date de validité : </span>{fmtDate(doc.validity)}</div>}
@@ -493,16 +527,16 @@ function DocumentPrintTemplate({
       {/* IDs */}
       <div className="ids">
         <div className="ids-l">
-          <div className="idr"><span className="idk">RCCM : </span>{esc(company.rccm)}</div>
-          <div className="idr"><span className="idk">NINEA : </span>{esc(company.ninea)}</div>
+          {company.rccm && <div className="idr"><span className="idk">RCCM : </span>{esc(company.rccm)}</div>}
+          {company.ninea && <div className="idr"><span className="idk">NINEA : </span>{esc(company.ninea)}</div>}
           {company.ifu && <div className="idr"><span className="idk">IFU : </span>{esc(company.ifu)}</div>}
         </div>
         <div className="ids-c">
           <img src="/images/cachet.jpeg" alt="" style={{ height: 40, opacity: 0.55 }} />
         </div>
         <div className="ids-r">
-          <div className="idr"><span className="idk">Banque : </span>{esc(company.bank)}</div>
-          <div className="idr"><span className="idk">IBAN : </span>{esc(company.iban)}</div>
+          {company.bank && <div className="idr"><span className="idk">Banque : </span>{esc(company.bank)}</div>}
+          {company.iban && <div className="idr"><span className="idk">IBAN : </span>{esc(company.iban)}</div>}
         </div>
       </div>
 
@@ -569,7 +603,7 @@ function DocumentPrintTemplate({
           <img src="/images/cachet.jpeg" alt="Cachet" className="stamp-img" />
         </div>
         <div className="sig-txt">
-          <div className="sig-t">Pour {company.name}</div>
+          <div className="sig-t">Pour {esc(company.name)}</div>
           <div className="sig-s">La Direction</div>
           <div className="sig-line" />
         </div>
@@ -580,54 +614,15 @@ function DocumentPrintTemplate({
         <div className="ftr-hdr">COORDONNÉES BANCAIRES</div>
         <div className="ftr-body">
           <div className="bk-col">
-            <div className="bk-r"><span className="bk-k">Banque :</span><span>{esc(company.bank)}</span></div>
-            <div className="bk-r"><span className="bk-k">Titulaire :</span><span>{esc(company.bkName)}</span></div>
-            <div className="bk-r"><span className="bk-k">IBAN :</span><span>{esc(company.iban)}</span></div>
-            <div className="bk-r"><span className="bk-k">SWIFT :</span><span>{esc(company.swift)}</span></div>
-            <div className="bk-r"><span className="bk-k">N° Compte :</span><span>{esc(company.compte)}</span></div>
+            {company.bank && <div className="bk-r"><span className="bk-k">Banque :</span><span>{esc(company.bank)}</span></div>}
+            {company.bkName && <div className="bk-r"><span className="bk-k">Titulaire :</span><span>{esc(company.bkName)}</span></div>}
+            {company.iban && <div className="bk-r"><span className="bk-k">IBAN :</span><span>{esc(company.iban)}</span></div>}
+            {company.swift && <div className="bk-r"><span className="bk-k">SWIFT :</span><span>{esc(company.swift)}</span></div>}
+            {company.compte && <div className="bk-r"><span className="bk-k">N° Compte :</span><span>{esc(company.compte)}</span></div>}
           </div>
         </div>
       </div>
       <div className="bbar"><em>Merci pour votre confiance !</em></div>
-    </div>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return <section className="bg-white border border-bdr rounded-[10px] p-4">{children}</section>;
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-[10px] font-bold uppercase tracking-wide text-white bg-navy -mt-4 -mx-4 mb-3.5 px-4 py-[7px] rounded-t-[10px]">
-      {children}
-    </h2>
-  );
-}
-
-function Field({
-  label,
-  value,
-  type = "text",
-  placeholder,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  type?: string;
-  placeholder?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div>
-      <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">{label}</label>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10"
-      />
     </div>
   );
 }

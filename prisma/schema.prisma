@@ -8,8 +8,44 @@ datasource db {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// AUTHENTICATION & AUTHORIZATION
+// ═══════════════════════════════════════════════════════════════
+
+enum UserRole {
+  OWNER
+  IT_ADMIN
+  ADMIN
+  SALES
+  ASSISTANT
+  DELIVERY
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  name          String
+  passwordHash  String      @map("password_hash")
+  role          UserRole    @default(SALES)
+  status        UserStatus  @default(ACTIVE)
+  lastLoginAt   DateTime?   @map("last_login_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  auditEvents   AuditEvent[]
+
+  @@map("users")
+}
+
+// ═══════════════════════════════════════════════════════════════
 // COMPANY SETTINGS
 // ═══════════════════════════════════════════════════════════════
+
 model CompanySettings {
   id            String   @id @default("company_main")
   name          String   @default("KSY GLOBAL SERVICE")
@@ -30,7 +66,7 @@ model CompanySettings {
   swift         String?
   compte        String?
   tvaDefault    String   @default("non") @map("tva_default")
-  tvaRate       Float    @default(18) @map("tva_rate")
+  tvaRate       Decimal  @default(18) @db.Decimal(5, 2) @map("tva_rate")
   currency      String   @default("XOF")
   logoUrl       String?  @map("logo_url")
   cachetUrl     String?  @map("cachet_url")
@@ -46,12 +82,16 @@ model CompanySettings {
 // ═══════════════════════════════════════════════════════════════
 // CUSTOMERS
 // ═══════════════════════════════════════════════════════════════
+
 model Customer {
   id            String   @id @default(cuid())
   name          String
+  contactName   String?  @map("contact_name")
   address       String?
+  city          String?
   phone         String?
   email         String?
+  notes         String?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -64,6 +104,7 @@ model Customer {
 // ═══════════════════════════════════════════════════════════════
 // DOCUMENTS (Pro Forma + Définitive)
 // ═══════════════════════════════════════════════════════════════
+
 enum DocumentType {
   PROFORMA
   DEFINITIVE
@@ -77,7 +118,7 @@ enum SaleMode {
 enum DocumentStatus {
   DRAFT
   FINALIZED
-  PRINTED
+  CANCELLED
 }
 
 model Document {
@@ -90,10 +131,10 @@ model Document {
   saleMode      SaleMode       @default(DIRECTE) @map("sale_mode")
   status        DocumentStatus @default(DRAFT)
   tvaOn         Boolean        @default(false) @map("tva_on")
-  tvaRate       Float          @default(18) @map("tva_rate")
-  subtotal      Float          @default(0)
-  tvaAmount     Float          @default(0) @map("tva_amount")
-  total         Float          @default(0)
+  tvaRate       Decimal        @default(18) @db.Decimal(5, 2) @map("tva_rate")
+  subtotal      Decimal        @default(0) @db.Decimal(15, 2)
+  tvaAmount     Decimal        @default(0) @db.Decimal(15, 2) @map("tva_amount")
+  total         Decimal        @default(0) @db.Decimal(15, 2)
   wordsValue    String?        @map("words_value")
 
   customerId    String?        @map("customer_id")
@@ -107,28 +148,42 @@ model Document {
   companyAddr   String?        @map("company_addr_snapshot")
   companyCity   String?        @map("company_city_snapshot")
   companyPhone  String?        @map("company_phone_snapshot")
+  companyEmail  String?        @map("company_email_snapshot")
   companyRccm   String?        @map("company_rccm_snapshot")
   companyNinea  String?        @map("company_ninea_snapshot")
+  companyIfu    String?        @map("company_ifu_snapshot")
+  companyBank   String?        @map("company_bank_snapshot")
+  companyBkName String?        @map("company_bk_name_snapshot")
   companyIban   String?        @map("company_iban_snapshot")
+  companySwift  String?        @map("company_swift_snapshot")
+  companyCompte String?        @map("company_compte_snapshot")
+
+  // Customer snapshot
+  customerName  String?        @map("customer_name_snapshot")
+  customerAddr  String?        @map("customer_addr_snapshot")
+  customerPhone String?        @map("customer_phone_snapshot")
+  customerEmail String?        @map("customer_email_snapshot")
 
   items         DocumentItem[]
   deliveryNotes DeliveryNote[]
 
+  createdBy     String?        @map("created_by")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@index([type])
   @@index([status])
   @@index([date])
+  @@index([num])
   @@map("documents")
 }
 
 model DocumentItem {
   id            String   @id @default(cuid())
   designation   String
-  quantity      Float    @default(0)
-  unitPrice     Float    @default(0) @map("unit_price")
-  total         Float    @default(0)
+  quantity      Decimal  @default(0) @db.Decimal(10, 2)
+  unitPrice     Decimal  @default(0) @db.Decimal(15, 2) @map("unit_price")
+  total         Decimal  @default(0) @db.Decimal(15, 2)
   sortOrder     Int      @default(0) @map("sort_order")
 
   documentId    String   @map("document_id")
@@ -143,6 +198,7 @@ model DocumentItem {
 // ═══════════════════════════════════════════════════════════════
 // DELIVERY NOTES (Bon de Livraison)
 // ═══════════════════════════════════════════════════════════════
+
 model DeliveryNote {
   id            String         @id @default(cuid())
   num           String         @unique
@@ -152,6 +208,7 @@ model DeliveryNote {
 
   driverName    String?        @map("driver_name")
   driverPhone   String?        @map("driver_phone")
+  orderRef      String?        @map("order_ref")
 
   customerId    String?        @map("customer_id")
   customer      Customer?      @relation(fields: [customerId], references: [id])
@@ -169,19 +226,27 @@ model DeliveryNote {
   companyPhone  String?        @map("company_phone_snapshot")
   companyRccm   String?        @map("company_rccm_snapshot")
 
+  // Customer snapshot
+  customerName  String?        @map("customer_name_snapshot")
+  customerAddr  String?        @map("customer_addr_snapshot")
+  customerPhone String?        @map("customer_phone_snapshot")
+  customerEmail String?        @map("customer_email_snapshot")
+
   items         DeliveryNoteItem[]
 
+  createdBy     String?        @map("created_by")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@index([date])
+  @@index([num])
   @@map("delivery_notes")
 }
 
 model DeliveryNoteItem {
   id            String       @id @default(cuid())
   designation   String
-  quantity      Float        @default(0)
+  quantity      Decimal      @default(0) @db.Decimal(10, 2)
   observation   String?
   sortOrder     Int          @default(0) @map("sort_order")
 
@@ -197,17 +262,38 @@ model DeliveryNoteItem {
 // ═══════════════════════════════════════════════════════════════
 // AUDIT EVENTS
 // ═══════════════════════════════════════════════════════════════
+
 enum AuditAction {
+  // Auth
+  USER_CREATED
+  USER_DISABLED
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  PASSWORD_CHANGED
+  ROLE_CHANGED
+
+  // Company
   COMPANY_SETTINGS_UPDATED
+
+  // Documents
   DOCUMENT_CREATED
   DOCUMENT_UPDATED
   DOCUMENT_PRINTED
   DOCUMENT_FINALIZED
+  DOCUMENT_CANCELLED
   DOCUMENT_DELETED
+
+  // Delivery
   DELIVERY_NOTE_CREATED
   DELIVERY_NOTE_UPDATED
   DELIVERY_NOTE_PRINTED
+  DELIVERY_NOTE_CONFIRMED
   DELIVERY_NOTE_DELETED
+
+  // Customers
+  CUSTOMER_CREATED
+  CUSTOMER_UPDATED
+  CUSTOMER_DELETED
 }
 
 model AuditEvent {
@@ -216,11 +302,15 @@ model AuditEvent {
   entityType    String      @map("entity_type")
   entityId      String?     @map("entity_id")
   entityNum     String?     @map("entity_num")
+  userId        String?     @map("user_id")
+  user          User?       @relation(fields: [userId], references: [id])
   details       Json?
+  ipAddress     String?     @map("ip_address")
   createdAt     DateTime    @default(now()) @map("created_at")
 
   @@index([action])
   @@index([entityType, entityId])
+  @@index([userId])
   @@index([createdAt])
   @@map("audit_events")
 }
@@ -228,6 +318,7 @@ model AuditEvent {
 // ═══════════════════════════════════════════════════════════════
 // DOCUMENT SEQUENCES (auto-numbering)
 // ═══════════════════════════════════════════════════════════════
+
 model DocumentSequence {
   id            String   @id @default(cuid())
   type          String

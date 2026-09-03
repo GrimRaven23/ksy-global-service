@@ -32,17 +32,17 @@ export default function DocumentsPage() {
         const pfDocs = (Array.isArray(pf) ? pf : []).map((d: any) => ({
           id: d.id, num: d.num, type: "PROFORMA", date: d.date,
           total: d.total, status: d.status, createdAt: d.createdAt,
-          clientName: d.customer?.name,
+          clientName: d.customerName || d.customer?.name,
         }));
         const dfDocs = (Array.isArray(df) ? df : []).map((d: any) => ({
           id: d.id, num: d.num, type: "DEFINITIVE", date: d.date,
           total: d.total, status: d.status, saleMode: d.saleMode, createdAt: d.createdAt,
-          clientName: d.customer?.name,
+          clientName: d.customerName || d.customer?.name,
         }));
         const blDocs = (Array.isArray(bl) ? bl : []).map((d: any) => ({
           id: d.id, num: d.num, type: "BL", date: d.date,
           total: 0, status: d.status, createdAt: d.createdAt,
-          clientName: d.customer?.name,
+          clientName: d.customerName || d.customer?.name,
         }));
         const all = [...pfDocs, ...dfDocs, ...blDocs]
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -69,14 +69,25 @@ export default function DocumentsPage() {
   const statusLabel = (s: string) => {
     if (s === "DRAFT") return "Brouillon";
     if (s === "FINALIZED") return "Finalisé";
-    return "Imprimé";
+    if (s === "CANCELLED") return "Annulé";
+    return s;
   };
 
   const handleDelete = async (id: string, type: string) => {
     if (!confirm("Supprimer ce document ? Cette action est irréversible.")) return;
     const endpoint = type === "BL" ? "/api/delivery" : "/api/documents";
-    await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
-    setDocs((prev) => prev.filter((d) => d.id !== id));
+    const res = await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setDocs((prev) => prev.filter((d) => d.id !== id));
+    } else {
+      alert("Erreur lors de la suppression.");
+    }
+  };
+
+  const handleOpen = (doc: Doc) => {
+    if (doc.type === "PROFORMA") router.push(`/proforma?id=${doc.id}`);
+    else if (doc.type === "DEFINITIVE") router.push(`/definitive?id=${doc.id}`);
+    else router.push(`/bl?id=${doc.id}`);
   };
 
   return (
@@ -144,11 +155,7 @@ export default function DocumentsPage() {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <button
-                      onClick={() => {
-                        if (doc.type === "PROFORMA") router.push("/proforma");
-                        else if (doc.type === "DEFINITIVE") router.push("/definitive");
-                        else router.push("/bl");
-                      }}
+                      onClick={() => handleOpen(doc)}
                       className="text-navy hover:underline mr-3 font-semibold"
                     >
                       Ouvrir

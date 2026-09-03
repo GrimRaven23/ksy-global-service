@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { deliveryCreateSchema, deliveryUpdateSchema } from "@/lib/validation";
-import { createDeliveryNote, updateDeliveryNote, listDeliveryNotes, deleteDeliveryNote } from "@/lib/services/delivery";
+import { createDeliveryNote, updateDeliveryNote, listDeliveryNotes, deleteDeliveryNote, getDeliveryNote } from "@/lib/services/delivery";
 import { createAuditEvent } from "@/lib/services/audit";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth().catch(() => null);
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     if (!hasPermission(user.role, "delivery.read")) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (id) {
+      const note = await getDeliveryNote(id);
+      if (!note) return NextResponse.json({ error: "Bon de livraison non trouvé" }, { status: 404 });
+      return NextResponse.json(note);
     }
 
     const notes = await listDeliveryNotes();

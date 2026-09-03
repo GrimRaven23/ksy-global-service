@@ -73,6 +73,7 @@ export default function BLEditor() {
   const docId = searchParams.get("id");
   const [doc, setDoc] = useState<BLData>(blankBL);
   const [company, setCompany] = useState<Company | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const isDirty = useRef(false);
   const isInitialLoad = useRef(true);
   const [printCopies, setPrintCopies] = useState<0 | 1 | 2>(0);
@@ -81,10 +82,18 @@ export default function BLEditor() {
   const docNum = doc.num || `BL-${curYear()}-${padN(1)}`;
 
   useEffect(() => {
+    let cancelled = false;
     Promise.all([
-      fetch("/api/settings").then((r) => r.json()),
-      docId ? fetch(`/api/delivery?id=${docId}`).then((r) => r.json()) : Promise.resolve(null),
+      fetch("/api/settings").then((r) => {
+        if (!r.ok) throw new Error(`Erreur ${r.status}`);
+        return r.json();
+      }),
+      docId ? fetch(`/api/delivery?id=${docId}`).then((r) => {
+        if (!r.ok) throw new Error(`Erreur ${r.status}`);
+        return r.json();
+      }) : Promise.resolve(null),
     ]).then(([comp, existing]) => {
+      if (cancelled) return;
       if (comp && !comp.error) setCompany(comp);
       if (existing && existing.id) {
         setDoc({
@@ -108,7 +117,13 @@ export default function BLEditor() {
         });
       }
       setTimeout(() => { isInitialLoad.current = false; }, 100);
+    }).catch((err) => {
+      if (cancelled) return;
+      console.error("Failed to load BL data:", err);
+      setLoadError("Impossible de charger les données. Vérifiez votre connexion et votre authentification.");
+      setTimeout(() => { isInitialLoad.current = false; }, 100);
     });
+    return () => { cancelled = true; };
   }, [docId]);
 
   const updateField = useCallback((field: keyof BLData, value: string) => {
@@ -218,6 +233,26 @@ export default function BLEditor() {
     setDoc(blankBL());
     router.push("/bl");
   };
+
+  if (loadError) return (
+    <main className="no-print">
+      <div className="max-w-[600px] mx-auto mt-20 px-5 text-center">
+        <div className="bg-white border border-red-200 rounded-xl p-8">
+          <div className="text-red-500 text-4xl mb-4">⚠</div>
+          <h2 className="text-sm font-bold text-red-700 mb-2">Erreur de chargement</h2>
+          <p className="text-xs text-txt2 mb-4">{loadError}</p>
+          <div className="flex gap-2 justify-center">
+            <button onClick={() => router.push("/")} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
+              Retour au tableau de bord
+            </button>
+            <button onClick={() => window.location.reload()} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
+              Réessayer
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 
   if (!company) return <div className="p-10 text-center text-txt2">Chargement...</div>;
 

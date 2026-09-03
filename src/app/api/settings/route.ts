@@ -6,6 +6,9 @@ import { createAuditEvent } from "@/lib/services/audit";
 
 export async function GET() {
   try {
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
     const company = await getCompany();
     return NextResponse.json(company);
   } catch (error) {

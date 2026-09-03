@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { documentCreateSchema, documentUpdateSchema } from "@/lib/validation";
-import { createDocument, updateDocument, listDocuments, deleteDocument } from "@/lib/services/documents";
+import { createDocument, updateDocument, listDocuments, deleteDocument, getDocument } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
 
 export async function GET(request: NextRequest) {
@@ -13,6 +13,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (id) {
+      const doc = await getDocument(id);
+      if (!doc) return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
+      return NextResponse.json(doc);
+    }
+
     const type = searchParams.get("type") || undefined;
     if (type && !["PROFORMA", "DEFINITIVE"].includes(type)) {
       return NextResponse.json({ error: "Type invalide" }, { status: 400 });

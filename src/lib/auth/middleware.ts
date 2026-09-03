@@ -33,17 +33,26 @@ export function middleware(request: NextRequest) {
     return addSecurityHeaders(NextResponse.next());
   }
 
+  // CRITICAL: If SESSION_SECRET is not configured, BLOCK all access
+  // Never silently bypass authentication
+  if (!SESSION_SECRET) {
+    console.error("FATAL: SESSION_SECRET environment variable is not configured. Authentication is disabled.");
+    // In production, block everything. In development, show an error page.
+    if (process.env.NODE_ENV === "production") {
+      return new NextResponse("Server configuration error: SESSION_SECRET not configured.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain" },
+      });
+    }
+    // In development, allow through but log warning (already logged above)
+  }
+
   // Check session
   const token = request.cookies.get("session")?.value;
   if (!token) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
-  }
-
-  if (!SESSION_SECRET) {
-    // If no session secret configured, allow through (dev mode)
-    return addSecurityHeaders(NextResponse.next());
   }
 
   const payload = verifySessionToken(token, SESSION_SECRET);

@@ -23,31 +23,24 @@ const PUBLIC_PATHS = ["/api/auth/login", "/api/auth/logout", "/login", "/_next",
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return addSecurityHeaders(NextResponse.next());
   }
 
-  // Allow static assets
   if (pathname.startsWith("/_next/") || pathname.includes(".")) {
     return addSecurityHeaders(NextResponse.next());
   }
 
-  // CRITICAL: If SESSION_SECRET is not configured, BLOCK all access
-  // Never silently bypass authentication
   if (!SESSION_SECRET) {
-    console.error("FATAL: SESSION_SECRET environment variable is not configured. Authentication is disabled.");
-    // In production, block everything. In development, show an error page.
+    console.error("FATAL: SESSION_SECRET environment variable is not configured.");
     if (process.env.NODE_ENV === "production") {
       return new NextResponse("Server configuration error: SESSION_SECRET not configured.", {
         status: 503,
         headers: { "Content-Type": "text/plain" },
       });
     }
-    // In development, allow through but log warning (already logged above)
   }
 
-  // Check session
   const token = request.cookies.get("session")?.value;
   if (!token) {
     const url = request.nextUrl.clone();

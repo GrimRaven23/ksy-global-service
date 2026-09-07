@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - uses: github/codeql-action/init@4dd16135b69a43b6c8efb853346f8437d92d3c93
+      - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938
         with:
           languages: javascript-typescript
           queries: security-and-quality

@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
     logger.info("Login successful", "auth", { userId: user.id, email: user.email, role: user.role });
     return apiSuccess({ id: user.id, name: user.name, role: user.role });
   } catch (error) {
-    logger.error("Login error", "auth", undefined, error);
+    const detail = error instanceof Error ? error.message : String(error);
+    logger.error(`Login error: ${detail}`, "auth", undefined, error);
     return apiError(error);
   }
 }

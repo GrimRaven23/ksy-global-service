@@ -12,13 +12,16 @@ terraform {
     }
   }
 
-  cloud {
-    organization = "ksy-global"
-
-    workspaces {
-      name = "ksy-global-service"
-    }
-  }
+  # Backend configuration
+  # For local: use `terraform init` with no backend (state stored locally)
+  # For remote: uncomment and configure for Terraform Cloud / S3 + DynamoDB
+  # backend "s3" {
+  #   bucket         = "ksy-global-tfstate"
+  #   key            = "production/terraform.tfstate"
+  #   region         = "eu-central-1"
+  #   dynamodb_table = "terraform-locks"
+  #   encrypt        = true
+  # }
 }
 
 variable "vercel_api_token" {

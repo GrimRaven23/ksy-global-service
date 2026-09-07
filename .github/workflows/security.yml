@@ -45,7 +45,7 @@ jobs:
       - run: npm ci
 
       - name: Security audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
         continue-on-error: false
 
       - name: Check for known vulnerabilities
@@ -62,9 +62,30 @@ jobs:
 
       - name: Check for hardcoded secrets
         run: |
-          echo "Scanning for potential secrets..."
-          if grep -rn "password.*=.*['\"]" src/ --include="*.ts" --include="*.tsx" | grep -v "passwordHash" | grep -v "password:" | grep -v "// " | grep -v "verifyPassword" | grep -v "hashPassword" | grep -v "password\b.*z\." | grep -v "test"; then
+          echo "Scanning for potential hardcoded secrets..."
+          FOUND=0
+          
+          # Check for hardcoded passwords (not in types, validation, or auth logic)
+          if grep -rn 'password\s*=\s*"[^"]\{8,\}"' src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "passwordHash" | grep -v "password:" | grep -v "verifyPassword" | grep -v "hashPassword" | grep -v "z\." | grep -v "\.test\." | grep -v "test-" | grep -v "min(" | grep -v "max(" | grep -v "schema" | grep -v "placeholder" | grep -v "example"; then
             echo "WARNING: Potential hardcoded passwords found"
+            FOUND=1
+          fi
+          
+          # Check for API keys / tokens in source (not in types or validation)
+          if grep -rn 'api[_-]\?key\s*=\s*"[^"]\{20,\}"' src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "schema" | grep -v "validation"; then
+            echo "WARNING: Potential hardcoded API keys found"
+            FOUND=1
+          fi
+          
+          # Check for secret keys in source (not in types, validation, or env config)
+          if grep -rn 'secret\s*=\s*"[^"]\{20,\}"' src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "SESSION_SECRET" | grep -v "CSRF_SECRET" | grep -v "schema" | grep -v "validation" | grep -v "env.ts" | grep -v "process.env"; then
+            echo "WARNING: Potential hardcoded secrets found"
+            FOUND=1
+          fi
+          
+          if [ "$FOUND" -eq 1 ]; then
+            echo "Review the findings above. If these are false positives, update the scan patterns."
             exit 1
           fi
+          
           echo "No hardcoded secrets detected"

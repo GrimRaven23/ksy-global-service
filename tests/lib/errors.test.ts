@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   AppError,
   NotFoundError,
@@ -89,16 +89,14 @@ describe("getErrorMessage", () => {
   });
 
   it("should return generic message in production for regular errors", () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     expect(getErrorMessage(new Error("secret"))).toBe("Erreur serveur");
-    process.env.NODE_ENV = originalEnv;
+    vi.unstubAllEnvs();
   });
 
   it("should return original message in development", () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
     expect(getErrorMessage(new Error("dev error"))).toBe("dev error");
-    process.env.NODE_ENV = originalEnv;
+    vi.unstubAllEnvs();
   });
 });

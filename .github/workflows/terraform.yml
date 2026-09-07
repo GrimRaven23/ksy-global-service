@@ -31,8 +31,6 @@ jobs:
 
       - name: Terraform init
         run: terraform init
-        env:
-          TF_CLOUD_ORGANIZATION: "ksy-global"
 
       - name: Terraform validate
         run: terraform validate

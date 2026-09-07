@@ -1,0 +1,30 @@
+import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+export async function GET() {
+  try {
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [totalDocuments, totalRevenue, documentsThisMonth, totalDeliveryNotes] = await Promise.all([
+      prisma.document.count(),
+      prisma.document.aggregate({ _sum: { total: true }, where: { status: "FINALIZED" } }),
+      prisma.document.count({ where: { createdAt: { gte: startOfMonth } } }),
+      prisma.deliveryNote.count(),
+    ]);
+
+    return NextResponse.json({
+      totalDocuments,
+      totalRevenue: Number(totalRevenue._sum.total || 0),
+      documentsThisMonth,
+      totalDeliveryNotes,
+    });
+  } catch (error) {
+    console.error("GET /api/dashboard/stats error:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}

@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fmtDate, fmtNum } from "@/lib/utils";
+import { FileText, Receipt, Truck, LogOut, BarChart3, Clock, Activity } from "lucide-react";
+import { Card, Badge, Button, Avatar, Skeleton, EmptyState, SectionTitle } from "@/components/ui";
+import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
+import { fmtNum } from "@/lib/utils";
 
 interface Doc {
   id: string;
@@ -12,7 +15,7 @@ interface Doc {
   total: number;
   status: string;
   createdAt: string;
-  clientName?: string;
+  customerName?: string;
 }
 
 interface UserInfo {
@@ -22,38 +25,70 @@ interface UserInfo {
   role: string;
 }
 
+interface Stats {
+  totalDocuments: number;
+  totalRevenue: number;
+  documentsThisMonth: number;
+  totalDeliveryNotes: number;
+}
+
+interface AuditEvent {
+  id: string;
+  action: string;
+  entityType: string;
+  createdAt: string;
+  user?: { name: string } | null;
+}
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Bonjour";
+  if (h < 18) return "Bon après-midi";
+  return "Bonsoir";
+}
+
 export default function Home() {
   const router = useRouter();
   const [recentDocs, setRecentDocs] = useState<Doc[]>([]);
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [stats, setStats] = useState<Stats>({ totalDocuments: 0, totalRevenue: 0, documentsThisMonth: 0, totalDeliveryNotes: 0 });
+  const [activity, setActivity] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me").then((r) => r.json()),
+      fetch("/api/dashboard/stats").then((r) => r.json()).catch(() => ({ totalDocuments: 0, totalRevenue: 0, documentsThisMonth: 0, totalDeliveryNotes: 0 })),
       fetch("/api/documents").then((r) => r.json()).catch(() => []),
       fetch("/api/delivery").then((r) => r.json()).catch(() => []),
+      fetch("/api/audit?limit=5").then((r) => r.json()).catch(() => ({ events: [] })),
     ])
-      .then(([me, docs, bl]) => {
-        if (me.user) setUser(me.user);
+      .then(([me, st, docs, bl, audit]) => {
+        if (!me.user) {
+          router.push("/login");
+          return;
+        }
+        setUser(me.user);
+        setStats(st);
         const docsArr = (Array.isArray(docs) ? docs : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: String(d.type), date: String(d.date),
           total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
-          clientName: String(d.customerName || ""),
+          customerName: String(d.customerName || ""),
         }));
         const blArr = (Array.isArray(bl) ? bl : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
           total: 0, status: String(d.status), createdAt: String(d.createdAt),
-          clientName: String(d.customerName || ""),
+          customerName: String(d.customerName || ""),
         }));
         const all = [...docsArr, ...blArr]
           .sort((a: Doc, b: Doc) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 8);
         setRecentDocs(all);
+        setActivity(audit.events || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => { router.push("/login"); });
+  }, [router]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -61,142 +96,170 @@ export default function Home() {
     router.refresh();
   };
 
-  const typeLabel = (t: string) => {
-    if (t === "PROFORMA") return "Pro Forma";
-    if (t === "DEFINITIVE") return "Définitive";
-    return "Bon de Livraison";
-  };
+  const quickActions = [
+    { label: "Nouvelle Pro Forma", desc: "Créer une facture pro forma", icon: FileText, href: "/proforma", color: "bg-navy/5 text-navy" },
+    { label: "Nouvelle Définitive", desc: "Créer une facture définitive", icon: Receipt, href: "/definitive", color: "bg-blue-50 text-blue-600" },
+    { label: "Nouveau Bon de Livraison", desc: "Créer un bon de livraison", icon: Truck, href: "/bl", color: "bg-gold/10 text-gold" },
+  ];
 
-  const typeColor = (t: string) => {
-    if (t === "PROFORMA") return "bg-navy/10 text-navy";
-    if (t === "DEFINITIVE") return "bg-blue-100 text-blue-700";
-    return "bg-gold/20 text-navy";
-  };
+  if (loading) {
+    return (
+      <div className="no-print">
+        <header className="bg-white border-b-2 border-navy px-5 py-3">
+          <Skeleton className="h-8 w-48" />
+        </header>
+        <main className="max-w-6xl mx-auto px-5 py-6 space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-[10px]" />)}
+          </div>
+          <Skeleton className="h-40 rounded-[10px]" />
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <main className="max-w-[1440px] mx-auto px-5 pb-10">
-      {/* Header */}
-      <header className="flex items-center justify-between py-4 border-b-2 border-navy mb-8">
-        <div className="flex items-center gap-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo.jpeg" alt="KSY" className="h-12 w-auto" />
+    <div className="no-print">
+      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-navy flex items-center justify-center">
+            <span className="text-gold-lt font-bold text-sm">KSY</span>
+          </div>
           <div>
-            <h1 className="text-lg font-bold text-navy">KSY GLOBAL SERVICE</h1>
-            <p className="text-[10px] text-txt2 uppercase tracking-wide">KNOWLEDGE &bull; SERVICE &bull; YIELD</p>
+            <h1 className="text-sm font-bold text-navy">KSY GLOBAL SERVICE</h1>
+            <p className="text-[10px] text-txt2">KNOWLEDGE • SERVICE • YIELD</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           {user && (
-            <div className="text-right">
-              <div className="text-xs font-semibold text-navy">{user.name}</div>
-              <div className="text-[10px] text-txt2">{user.role}</div>
+            <div className="flex items-center gap-2">
+              <Avatar name={user.name} size="sm" />
+              <div className="text-right">
+                <p className="text-xs font-semibold text-navy">{greeting()}, {user.name.split(" ")[0]}</p>
+                <p className="text-[10px] text-txt2">{user.role}</p>
+              </div>
             </div>
           )}
-          <button onClick={handleLogout} className="bg-transparent border border-bdr text-txt2 px-3 py-1.5 rounded text-xs cursor-pointer hover:bg-red-50 hover:text-red hover:border-red-200 transition-colors">
-            Déconnexion
-          </button>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <LogOut className="w-3.5 h-3.5" /> Déconnexion
+          </Button>
         </div>
       </header>
 
-      {/* Document creation cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <button
-          onClick={() => router.push("/proforma")}
-          className="group bg-white border border-bdr rounded-xl p-5 text-left cursor-pointer hover:border-navy hover:shadow-md transition-all"
-        >
-          <div className="w-10 h-10 bg-navy/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-navy group-hover:text-white transition-colors">
-            <span className="text-lg">&#128196;</span>
-          </div>
-          <h3 className="text-sm font-bold text-navy mb-1">Facture Pro Forma</h3>
-          <p className="text-[11px] text-txt2">Cr&eacute;er une facture proforma</p>
-        </button>
-
-        <button
-          onClick={() => router.push("/definitive")}
-          className="group bg-white border border-bdr rounded-xl p-5 text-left cursor-pointer hover:border-navy hover:shadow-md transition-all"
-        >
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-            <span className="text-lg">&#128196;</span>
-          </div>
-          <h3 className="text-sm font-bold text-navy mb-1">Facture D&eacute;finitive</h3>
-          <p className="text-[11px] text-txt2">Cr&eacute;er une facture d&eacute;finitive</p>
-        </button>
-
-        <button
-          onClick={() => router.push("/bl")}
-          className="group bg-white border border-bdr rounded-xl p-5 text-left cursor-pointer hover:border-navy hover:shadow-md transition-all"
-        >
-          <div className="w-10 h-10 bg-gold/20 rounded-lg flex items-center justify-center mb-3 group-hover:bg-gold group-hover:text-navy transition-colors">
-            <span className="text-lg">&#128666;</span>
-          </div>
-          <h3 className="text-sm font-bold text-navy mb-1">Bon de Livraison</h3>
-          <p className="text-[11px] text-txt2">Cr&eacute;er un bon de livraison</p>
-        </button>
-      </div>
-
-      {/* Quick links */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <button onClick={() => router.push("/documents")} className="bg-white text-navy border border-bdr px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:border-navy transition-colors">
-          Tous les documents
-        </button>
-        <button onClick={() => router.push("/audit")} className="bg-white text-navy border border-bdr px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:border-navy transition-colors">
-          Journal d&apos;audit
-        </button>
-        <button onClick={() => router.push("/settings")} className="bg-white text-navy border border-bdr px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:border-navy transition-colors">
-          Param&egrave;tres
-        </button>
-      </div>
-
-      {/* Recent documents */}
-      <div className="bg-white border border-bdr rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-bdr bg-navy/5">
-          <h2 className="text-xs font-bold text-navy uppercase tracking-wide">Documents r&eacute;cents</h2>
+      <main className="max-w-6xl mx-auto px-5 py-6 space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy" },
+            { label: "Revenus (FCFA)", value: fmtNum(stats.totalRevenue), icon: BarChart3, color: "text-green-600" },
+            { label: "Ce mois", value: stats.documentsThisMonth, icon: Clock, color: "text-blue-600" },
+            { label: "Bons de livraison", value: stats.totalDeliveryNotes, icon: Truck, color: "text-gold" },
+          ].map((s) => (
+            <Card key={s.label} hover shadow className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center ${s.color}`}>
+                <s.icon className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-navy">{s.value}</p>
+                <p className="text-[10px] text-txt2 uppercase tracking-wide">{s.label}</p>
+              </div>
+            </Card>
+          ))}
         </div>
-        {loading ? (
-          <div className="text-center py-8 text-txt2 text-xs">Chargement...</div>
-        ) : recentDocs.length === 0 ? (
-          <div className="text-center py-8 text-txt2 text-xs">Aucun document. Cr&eacute;ez votre premier document !</div>
-        ) : (
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-[10px] text-txt2 uppercase tracking-wide border-b border-bdr/50">
-                <th className="text-left py-2 px-4">N&deg;</th>
-                <th className="text-left py-2 px-4">Type</th>
-                <th className="text-left py-2 px-4">Date</th>
-                <th className="text-left py-2 px-4">Client</th>
-                <th className="text-right py-2 px-4">Total</th>
-                <th className="text-center py-2 px-4">Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentDocs.map((doc) => (
-                <tr key={doc.id} className="border-b border-bdr/50 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => {
-                  if (doc.type === "PROFORMA") router.push(`/proforma?id=${doc.id}`);
-                  else if (doc.type === "DEFINITIVE") router.push(`/definitive?id=${doc.id}`);
-                  else router.push(`/bl?id=${doc.id}`);
-                }}>
-                  <td className="py-2.5 px-4 font-bold text-navy">{doc.num}</td>
-                  <td className="py-2.5 px-4">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${typeColor(doc.type)}`}>
-                      {typeLabel(doc.type)}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-txt2">{fmtDate(doc.date)}</td>
-                  <td className="py-2.5 px-4 text-txt2">{doc.clientName || "—"}</td>
-                  <td className="py-2.5 px-4 text-right font-bold text-navy">
-                    {doc.total ? fmtNum(doc.total) + " F" : "—"}
-                  </td>
-                  <td className="py-2.5 px-4 text-center">
-                    <span className="text-[10px] text-txt2">
-                      {doc.status === "DRAFT" ? "Brouillon" : doc.status === "FINALIZED" ? "Finalisé" : doc.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </main>
+
+        <div>
+          <h2 className="text-xs font-bold text-navy uppercase tracking-wide mb-3">Créer un document</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {quickActions.map((a) => (
+              <button
+                key={a.href}
+                onClick={() => router.push(a.href)}
+                className="bg-white border border-bdr rounded-[10px] p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
+              >
+                <div className={`w-12 h-12 rounded-xl ${a.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                  <a.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-bold text-navy mb-1">{a.label}</h3>
+                <p className="text-[11px] text-txt2">{a.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <Card>
+              <SectionTitle>Documents récents</SectionTitle>
+              {recentDocs.length === 0 ? (
+                <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document. Créez votre premier document !" action="Créer un document" onAction={() => router.push("/proforma")} />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-bdr">
+                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
+                        <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentDocs.map((d) => (
+                        <tr
+                          key={d.id}
+                          className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                          onClick={() => router.push(d.type === "BL" ? "/bl" : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
+                        >
+                          <td className="py-2 text-xs font-semibold text-navy">{d.num}</td>
+                          <td className="py-2"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
+                          <td className="py-2 text-xs text-txt2">{d.customerName || "—"}</td>
+                          <td className="py-2 text-xs text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
+                          <td className="py-2"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          <Card>
+            <SectionTitle icon={<Activity className="w-3 h-3" />}>Activité récente</SectionTitle>
+            {activity.length === 0 ? (
+              <p className="text-xs text-txt2 text-center py-6">Aucune activité</p>
+            ) : (
+              <div className="space-y-3">
+                {activity.map((e) => (
+                  <div key={e.id} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-navy/30 mt-1.5 shrink-0" />
+                    <div>
+                      <p className="text-[11px] text-txt">{e.action.replace(/_/g, " ").toLowerCase()}</p>
+                      <p className="text-[10px] text-txt2">{relativeTime(e.createdAt)}{e.user ? ` • ${e.user.name}` : ""}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div className="flex gap-2">
+          {[
+            { label: "Tous les documents", href: "/documents" },
+            { label: "Journal d'audit", href: "/audit" },
+            { label: "Paramètres", href: "/settings" },
+          ].map((l) => (
+            <button
+              key={l.href}
+              onClick={() => router.push(l.href)}
+              className="px-3 py-1.5 text-[11px] font-semibold text-navy bg-white border border-bdr rounded-full hover:border-navy transition-colors cursor-pointer"
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+      </main>
+    </div>
   );
 }

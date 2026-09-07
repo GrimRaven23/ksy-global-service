@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(doc, { status: 201 });
   } catch (error: unknown) {
     console.error("POST /api/documents error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
@@ -102,7 +102,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(doc);
   } catch (error: unknown) {
     console.error("PUT /api/documents error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
@@ -131,6 +131,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     console.error("DELETE /api/documents error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newUser, { status: 201 });
   } catch (error: unknown) {
     console.error("POST /api/users error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
@@ -80,6 +80,10 @@ export async function PUT(request: NextRequest) {
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
+    if (id === user.id) {
+      return NextResponse.json({ error: "Vous ne pouvez pas modifier votre propre compte" }, { status: 400 });
+    }
+
     const body = await request.json();
     const parsed = userUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -92,8 +96,9 @@ export async function PUT(request: NextRequest) {
       select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
     });
 
+    const action = parsed.data.role ? "ROLE_CHANGED" : "USER_DISABLED";
     await createAuditEvent({
-      action: "ROLE_CHANGED",
+      action,
       entityType: "user",
       entityId: updated.id,
       userId: user.id,
@@ -103,6 +108,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(updated);
   } catch (error: unknown) {
     console.error("PUT /api/users error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

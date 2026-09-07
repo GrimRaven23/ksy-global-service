@@ -4,6 +4,7 @@ import { createBLFromDocSchema } from "@/lib/validation";
 import { createDeliveryNote } from "@/lib/services/delivery";
 import { getDocument } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,13 @@ export async function POST(request: NextRequest) {
     const sourceDoc = await getDocument(parsed.data.documentId);
     if (!sourceDoc) {
       return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
+    }
+
+    const existingBL = await prisma.deliveryNote.findFirst({
+      where: { documentId: sourceDoc.id },
+    });
+    if (existingBL) {
+      return NextResponse.json({ error: "Un bon de livraison existe déjà pour ce document", existingBlId: existingBL.id }, { status: 409 });
     }
 
     const note = await createDeliveryNote({
@@ -52,6 +60,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(note, { status: 201 });
   } catch (error: unknown) {
     console.error("POST /api/documents/create-bl error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

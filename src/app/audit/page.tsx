@@ -2,31 +2,81 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fmtDate } from "@/lib/utils";
+import { ArrowLeft, Activity, ChevronDown, ChevronRight } from "lucide-react";
+import { Card, Badge, SearchInput, Pagination, Avatar, SkeletonTable, EmptyState } from "@/components/ui";
+import { relativeTime } from "@/lib/document-helpers";
 
 interface AuditEvent {
   id: string;
   action: string;
   entityType: string;
-  entityId: string | null;
-  entityNum: string | null;
-  details: Record<string, unknown> | null;
+  entityNum?: string | null;
+  details?: Record<string, unknown>;
   createdAt: string;
-  user?: { id: string; name: string; email: string } | null;
+  user?: { name: string; email: string } | null;
 }
+
+const actionColors: Record<string, string> = {
+  LOGIN_SUCCESS: "bg-green-100 text-green-700",
+  LOGIN_FAILURE: "bg-red-100 text-red-600",
+  USER_CREATED: "bg-blue-100 text-blue-700",
+  USER_DISABLED: "bg-red-100 text-red-600",
+  USER_UPDATED: "bg-blue-100 text-blue-700",
+  ROLE_CHANGED: "bg-purple-100 text-purple-700",
+  DOCUMENT_CREATED: "bg-green-100 text-green-700",
+  DOCUMENT_UPDATED: "bg-blue-100 text-blue-700",
+  DOCUMENT_FINALIZED: "bg-navy/10 text-navy",
+  DOCUMENT_DELETED: "bg-red-100 text-red-600",
+  DELIVERY_NOTE_CREATED: "bg-green-100 text-green-700",
+  DELIVERY_NOTE_UPDATED: "bg-blue-100 text-blue-700",
+  DELIVERY_NOTE_DELETED: "bg-red-100 text-red-600",
+  COMPANY_SETTINGS_UPDATED: "bg-amber-100 text-amber-700",
+};
+
+const actionLabels: Record<string, string> = {
+  LOGIN_SUCCESS: "Connexion réussie",
+  LOGIN_FAILURE: "Échec de connexion",
+  USER_CREATED: "Utilisateur créé",
+  USER_DISABLED: "Utilisateur désactivé",
+  USER_UPDATED: "Utilisateur modifié",
+  ROLE_CHANGED: "Rôle modifié",
+  COMPANY_SETTINGS_UPDATED: "Paramètres modifiés",
+  DOCUMENT_CREATED: "Document créé",
+  DOCUMENT_UPDATED: "Document modifié",
+  DOCUMENT_FINALIZED: "Document finalisé",
+  DOCUMENT_DELETED: "Document supprimé",
+  DELIVERY_NOTE_CREATED: "BL créé",
+  DELIVERY_NOTE_UPDATED: "BL modifié",
+  DELIVERY_NOTE_DELETED: "BL supprimé",
+};
+
+const entityTypes = [
+  { value: "", label: "Tous" },
+  { value: "auth", label: "Authentification" },
+  { value: "document", label: "Documents" },
+  { value: "delivery_note", label: "Livraisons" },
+  { value: "company", label: "Entreprise" },
+  { value: "user", label: "Utilisateurs" },
+];
 
 export default function AuditPage() {
   const router = useRouter();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [total, setTotal] = useState(0);
-  const [filter, setFilter] = useState("ALL");
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
-  const limit = 50;
+  const [entityType, setEntityType] = useState("");
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const limit = 20;
+  const totalPages = Math.ceil(total / limit);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/audit?limit=${limit}&offset=${page * limit}`)
+    const params = new URLSearchParams({ limit: String(limit), offset: String(page * limit) });
+    if (entityType) params.set("entityType", entityType);
+
+    fetch(`/api/audit?${params}`)
       .then((r) => r.json())
       .then((data) => {
         setEvents(data.events || []);
@@ -34,134 +84,117 @@ export default function AuditPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [page]);
+  }, [page, entityType]);
 
-  const filtered = filter === "ALL" ? events : events.filter((e) => e.entityType === filter);
-
-  const actionLabel = (a: string) => {
-    const labels: Record<string, string> = {
-      LOGIN_SUCCESS: "Connexion réussie",
-      LOGIN_FAILURE: "Échec de connexion",
-      USER_CREATED: "Utilisateur créé",
-      USER_DISABLED: "Utilisateur désactivé",
-      ROLE_CHANGED: "Rôle modifié",
-      COMPANY_SETTINGS_UPDATED: "Paramètres modifiés",
-      DOCUMENT_CREATED: "Document créé",
-      DOCUMENT_UPDATED: "Document modifié",
-      DOCUMENT_PRINTED: "Document imprimé",
-      DOCUMENT_FINALIZED: "Document finalisé",
-      DOCUMENT_DELETED: "Document supprimé",
-      DELIVERY_NOTE_CREATED: "BL créé",
-      DELIVERY_NOTE_UPDATED: "BL modifié",
-      DELIVERY_NOTE_PRINTED: "BL imprimé",
-      DELIVERY_NOTE_DELETED: "BL supprimé",
-      CUSTOMER_CREATED: "Client créé",
-      CUSTOMER_UPDATED: "Client modifié",
-    };
-    return labels[a] || a;
-  };
-
-  const actionColor = (a: string) => {
-    if (a.includes("LOGIN_FAILURE") || a.includes("DELETED") || a.includes("DISABLED")) return "bg-red-50 text-red-700";
-    if (a.includes("CREATED")) return "bg-green-50 text-green-700";
-    if (a.includes("UPDATED") || a.includes("CHANGED")) return "bg-blue-50 text-blue-700";
-    if (a.includes("PRINTED")) return "bg-purple-50 text-purple-700";
-    return "bg-gray-50 text-gray-700";
-  };
-
-  const totalPages = Math.ceil(total / limit);
+  const filtered = events.filter((e) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    const label = actionLabels[e.action] || e.action;
+    return label.toLowerCase().includes(q) || e.action.toLowerCase().includes(q) || (e.user?.name || "").toLowerCase().includes(q);
+  });
 
   return (
-    <main className="max-w-[1440px] mx-auto px-5 pb-10">
-      <nav className="flex items-center justify-between flex-wrap gap-2 py-3 border-b-2 border-navy mb-5 sticky top-0 bg-bg z-50">
-        <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-3 py-1.5 rounded hover:bg-navy/5">
-          &#8592; Retour
+    <div className="no-print">
+      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
+        <button onClick={() => router.push("/")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+          <ArrowLeft className="w-4 h-4 text-navy" />
         </button>
-        <span className="text-[15px] font-bold text-navy">Journal d&apos;audit</span>
-        <span className="text-xs text-txt2">{total} &eacute;v&eacute;nement(s)</span>
-      </nav>
+        <h1 className="text-sm font-bold text-navy">Journal d&apos;audit</h1>
+        <Badge color="bg-navy/10 text-navy">{total}</Badge>
+      </header>
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-5 flex-wrap">
-        {["ALL", "auth", "document", "delivery_note", "company", "user"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-md text-[11px] font-semibold border transition-colors ${
-              filter === f
-                ? "bg-navy text-white border-navy"
-                : "bg-white text-navy border-bdr hover:border-navy"
-            }`}
-          >
-            {f === "ALL" ? "Tous" : f === "auth" ? "Authentification" : f === "document" ? "Documents" : f === "delivery_note" ? "Livraisons" : f === "company" ? "Entreprise" : "Utilisateurs"}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="text-center py-10 text-txt2">Chargement...</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-10 text-txt2">Aucun &eacute;v&eacute;nement.</div>
-      ) : (
-        <div className="bg-white border border-bdr rounded-[10px] overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-navy text-white text-[10px] uppercase tracking-wide">
-                <th className="text-left py-3 px-4">Date</th>
-                <th className="text-left py-3 px-4">Action</th>
-                <th className="text-left py-3 px-4">Entit&eacute;</th>
-                <th className="text-left py-3 px-4">Utilisateur</th>
-                <th className="text-left py-3 px-4">D&eacute;tails</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((event) => (
-                <tr key={event.id} className="border-b border-bdr/50 hover:bg-gray-50 transition-colors">
-                  <td className="py-2.5 px-4 text-txt2 whitespace-nowrap">{fmtDate(event.createdAt)}</td>
-                  <td className="py-2.5 px-4">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${actionColor(event.action)}`}>
-                      {actionLabel(event.action)}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <span className="text-navy font-semibold">{event.entityType}</span>
-                    {event.entityNum && <span className="text-txt2 ml-1">({event.entityNum})</span>}
-                  </td>
-                  <td className="py-2.5 px-4 text-txt2">
-                    {event.user?.name || "—"}
-                  </td>
-                  <td className="py-2.5 px-4 text-txt2 text-[10px]">
-                    {event.details ? JSON.stringify(event.details).slice(0, 100) : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <main className="max-w-6xl mx-auto px-5 py-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <SearchInput value={search} onChange={setSearch} placeholder="Rechercher une action..." />
+          </div>
         </div>
-      )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-5">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="bg-white text-navy border border-bdr px-3 py-1.5 rounded text-xs font-semibold cursor-pointer hover:border-navy disabled:opacity-50"
-          >
-            Pr&eacute;c&eacute;dent
-          </button>
-          <span className="text-xs text-txt2">
-            Page {page + 1} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="bg-white text-navy border border-bdr px-3 py-1.5 rounded text-xs font-semibold cursor-pointer hover:border-navy disabled:opacity-50"
-          >
-            Suivant
-          </button>
+        <div className="flex flex-wrap gap-2">
+          {entityTypes.map((et) => (
+            <button
+              key={et.value}
+              onClick={() => { setEntityType(et.value); setPage(0); }}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
+                entityType === et.value ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
+              }`}
+            >
+              {et.label}
+            </button>
+          ))}
         </div>
-      )}
-    </main>
+
+        <Card>
+          {loading ? (
+            <SkeletonTable rows={10} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Activity className="w-10 h-10" />} message="Aucun événement trouvé." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-bdr">
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2 w-8"></th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Date</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Action</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Entité</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Utilisateur</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((e) => (
+                    <>
+                      <tr
+                        key={e.id}
+                        className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => setExpanded(expanded === e.id ? null : e.id)}
+                      >
+                        <td className="py-2 text-txt2">
+                          {expanded === e.id ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        </td>
+                        <td className="py-2 text-xs text-txt2 whitespace-nowrap">{relativeTime(e.createdAt)}</td>
+                        <td className="py-2">
+                          <Badge color={actionColors[e.action] || "bg-gray-100 text-gray-600"}>
+                            {actionLabels[e.action] || e.action.replace(/_/g, " ")}
+                          </Badge>
+                        </td>
+                        <td className="py-2 text-xs text-txt2">
+                          {e.entityType}{e.entityNum ? ` • ${e.entityNum}` : ""}
+                        </td>
+                        <td className="py-2">
+                          {e.user ? (
+                            <div className="flex items-center gap-1.5">
+                              <Avatar name={e.user.name} size="sm" />
+                              <span className="text-xs text-txt2">{e.user.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-txt2/50">—</span>
+                          )}
+                        </td>
+                      </tr>
+                      {expanded === e.id && (
+                        <tr key={`${e.id}-detail`}>
+                          <td colSpan={5} className="px-4 py-3 bg-gray-50/50">
+                            <pre className="text-[10px] text-txt2 font-mono whitespace-pre-wrap break-words">
+                              {JSON.stringify(e.details || {}, null, 2)}
+                            </pre>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {totalPages > 1 && (
+          <div className="flex justify-center">
+            <Pagination page={page + 1} totalPages={totalPages} onPageChange={(p) => setPage(p - 1)} />
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

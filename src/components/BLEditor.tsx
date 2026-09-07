@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
 import { fmtDate, todayStr, esc, curYear, padN } from "@/lib/utils";
-import { SectionTitle, Field } from "@/components/ui";
+import { SectionTitle, Field, Button } from "@/components/ui";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { Company, DEFAULT_COMPANY } from "@/lib/company-defaults";
+import { Save } from "lucide-react";
 
 interface BLProduct {
   designation: string;
@@ -27,46 +31,6 @@ interface BLData {
   products: BLProduct[];
   observations: string;
 }
-
-interface Company {
-  name: string;
-  slogan: string;
-  activite: string;
-  address: string;
-  city: string;
-  phone: string;
-  phone2: string;
-  email: string;
-  web: string;
-  rccm: string;
-  ninea: string;
-  ifu: string;
-  bank: string;
-  bkName: string;
-  iban: string;
-  swift: string;
-  compte: string;
-}
-
-const DEFAULT_COMPANY: Company = {
-  name: "KSY GLOBAL SERVICE",
-  slogan: "KNOWLEDGE • SERVICE • YIELD",
-  activite: "",
-  address: "",
-  city: "Dakar, Sénégal",
-  phone: "",
-  phone2: "",
-  email: "",
-  web: "",
-  rccm: "",
-  ninea: "",
-  ifu: "",
-  bank: "",
-  bkName: "",
-  iban: "",
-  swift: "",
-  compte: "",
-};
 
 const blankBLProduct = (): BLProduct => ({ designation: "", quantity: "", observation: "" });
 
@@ -96,6 +60,9 @@ export default function BLEditor() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const isDirty = useRef(false);
   const isInitialLoad = useRef(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [printCopies, setPrintCopies] = useState<0 | 1 | 2>(0);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -194,6 +161,7 @@ export default function BLEditor() {
   });
 
   const handleSave = async () => {
+    setIsSaving(true);
     const payload = buildPayload(doc);
 
     if (doc.id) {
@@ -204,9 +172,9 @@ export default function BLEditor() {
       });
       if (res.ok) {
         isDirty.current = false;
-        alert("Bon de livraison sauvegardé !");
+        toast.success("Bon de livraison sauvegardé !");
       } else {
-        alert("Erreur lors de la sauvegarde.");
+        toast.error("Erreur lors de la sauvegarde.");
       }
     } else {
       const res = await fetch("/api/delivery", {
@@ -218,11 +186,12 @@ export default function BLEditor() {
       if (data.id) {
         setDoc((prev) => ({ ...prev, id: data.id, num: data.num }));
         isDirty.current = false;
-        alert(`Bon de livraison créé : ${data.num}`);
+        toast.success(`Bon de livraison créé : ${data.num}`);
       } else {
-        alert("Erreur lors de la création.");
+        toast.error("Erreur lors de la création.");
       }
     }
+    setIsSaving(false);
   };
 
   const autoSave = useDebounce(async (documentData: BLData) => {
@@ -240,6 +209,14 @@ export default function BLEditor() {
     if (doc.id && isDirty.current && !isInitialLoad.current) autoSave(doc);
   }, [doc, autoSave]);
 
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty.current) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
   const handlePrint = useCallback((copies: 1 | 2) => {
     setPrintCopies(copies);
     setTimeout(() => {
@@ -248,8 +225,9 @@ export default function BLEditor() {
     }, 50);
   }, []);
 
-  const handleNew = () => {
-    if (!confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.")) return;
+  const handleNew = async () => {
+    const ok = await confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.");
+    if (!ok) return;
     setDoc(blankBL());
     router.push("/bl");
   };
@@ -417,9 +395,9 @@ export default function BLEditor() {
             <button onClick={handleNew} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
               Nouveau
             </button>
-            <button onClick={handleSave} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
-              Enregistrer
-            </button>
+            <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave}>
+              <Save className="w-3.5 h-3.5" /> Enregistrer
+            </Button>
             <button onClick={() => handlePrint(1)} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
               Imprimer (1 ex.)
             </button>

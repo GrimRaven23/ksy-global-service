@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
 import { fmtDate, fmtNum, numToWordsFCFA, calcInvoice, todayStr, esc, curYear, padN } from "@/lib/utils";
-import { Card, SectionTitle, Field } from "@/components/ui";
+import { Card, SectionTitle, Field, Button } from "@/components/ui";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { Company, DEFAULT_COMPANY } from "@/lib/company-defaults";
+import { Save } from "lucide-react";
 
 interface Product {
   designation: string;
@@ -27,46 +31,6 @@ interface DocData {
   clientAddr: string;
   products: Product[];
 }
-
-interface Company {
-  name: string;
-  slogan: string;
-  activite: string;
-  address: string;
-  city: string;
-  phone: string;
-  phone2: string;
-  email: string;
-  web: string;
-  rccm: string;
-  ninea: string;
-  ifu: string;
-  bank: string;
-  bkName: string;
-  iban: string;
-  swift: string;
-  compte: string;
-}
-
-const DEFAULT_COMPANY: Company = {
-  name: "KSY GLOBAL SERVICE",
-  slogan: "KNOWLEDGE • SERVICE • YIELD",
-  activite: "",
-  address: "",
-  city: "Dakar, Sénégal",
-  phone: "",
-  phone2: "",
-  email: "",
-  web: "",
-  rccm: "",
-  ninea: "",
-  ifu: "",
-  bank: "",
-  bkName: "",
-  iban: "",
-  swift: "",
-  compte: "",
-};
 
 const blankProduct = (): Product => ({ designation: "", quantity: "", price: "" });
 
@@ -98,6 +62,9 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
   const [printActive, setPrintActive] = useState(false);
   const isDirty = useRef(false);
   const isInitialLoad = useRef(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
   const isPF = type === "pf";
   const prefix = isPF ? "PF" : "FAC";
@@ -210,6 +177,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
   });
 
   const handleSave = async () => {
+    setIsSaving(true);
     const payload = buildPayload(doc);
 
     if (doc.id) {
@@ -220,9 +188,9 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       });
       if (res.ok) {
         isDirty.current = false;
-        alert(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} sauvegardée !`);
+        toast.success(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} sauvegardée !`);
       } else {
-        alert("Erreur lors de la sauvegarde.");
+        toast.error("Erreur lors de la sauvegarde.");
       }
     } else {
       const res = await fetch("/api/documents", {
@@ -234,11 +202,12 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       if (data.id) {
         setDoc((prev) => ({ ...prev, id: data.id, num: data.num }));
         isDirty.current = false;
-        alert(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} créée : ${data.num}`);
+        toast.success(`${isPF ? "Facture Pro Forma" : "Facture Définitive"} créée : ${data.num}`);
       } else {
-        alert("Erreur lors de la création.");
+        toast.error("Erreur lors de la création.");
       }
     }
+    setIsSaving(false);
   };
 
   const handlePrint = useCallback(() => {
@@ -264,9 +233,17 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     if (doc.id && isDirty.current && !isInitialLoad.current) autoSave(doc);
   }, [doc, autoSave]);
 
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty.current) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
   const handleCreateBL = async () => {
     if (!doc.id) {
-      alert("Veuillez d'abord sauvegarder la facture.");
+      toast.error("Veuillez d'abord sauvegarder la facture.");
       return;
     }
     try {
@@ -279,15 +256,16 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       if (bl.id) {
         router.push(`/bl?id=${bl.id}`);
       } else {
-        alert("Erreur lors de la création du BL.");
+        toast.error("Erreur lors de la création du BL.");
       }
     } catch {
-      alert("Erreur réseau.");
+      toast.error("Erreur réseau.");
     }
   };
 
-  const handleNew = () => {
-    if (!confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.")) return;
+  const handleNew = async () => {
+    const ok = await confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.");
+    if (!ok) return;
     setDoc(blankDoc());
     isDirty.current = false;
     router.push(isPF ? "/proforma" : "/definitive");
@@ -331,9 +309,9 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             <button onClick={handleNew} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
               Nouvelle
             </button>
-            <button onClick={handleSave} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
-              Enregistrer
-            </button>
+            <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave}>
+              <Save className="w-3.5 h-3.5" /> Enregistrer
+            </Button>
             <button onClick={handlePrint} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
               Imprimer
             </button>

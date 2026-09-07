@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, UserPlus, X } from "lucide-react";
+import { Card, Badge, Button, Avatar, SearchInput, Field, Select, SectionTitle, SkeletonTable, Skeleton } from "@/components/ui";
+import { roleLabel, roleColor, relativeTime } from "@/lib/document-helpers";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface User {
   id: string;
@@ -13,47 +18,41 @@ interface User {
   createdAt: string;
 }
 
-const ROLES = ["OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"];
-
-const roleLabel = (r: string) => {
-  const labels: Record<string, string> = {
-    OWNER: "Propriétaire",
-    IT_ADMIN: "Admin IT",
-    ADMIN: "Administrateur",
-    SALES: "Ventes",
-    ASSISTANT: "Assistant",
-    DELIVERY: "Livraison",
-    VIEWER: "Observateur",
-  };
-  return labels[r] || r;
-};
-
-const roleColor = (r: string) => {
-  if (r === "OWNER") return "bg-gold/20 text-navy";
-  if (r === "IT_ADMIN") return "bg-purple-100 text-purple-700";
-  if (r === "ADMIN") return "bg-blue-100 text-blue-700";
-  if (r === "SALES") return "bg-green-100 text-green-700";
-  if (r === "DELIVERY") return "bg-orange-100 text-orange-700";
-  return "bg-gray-100 text-gray-700";
-};
-
 export default function UsersPage() {
   const router = useRouter();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "SALES" });
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((data) => {
-        setUsers(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    Promise.all([
+      fetch("/api/auth/me").then((r) => r.json()),
+      fetch("/api/users").then((r) => r.json()),
+    ]).then(([me, data]) => {
+      if (!me.user) { router.push("/login"); return; }
+      setCurrentUser(me.user);
+      setUsers(Array.isArray(data) ? data : []);
+      setLoading(false);
+    }).catch(() => { router.push("/login"); });
+  }, [router]);
+
+  const filtered = useMemo(() => {
+    return users.filter((u) => {
+      if (roleFilter !== "ALL" && u.role !== roleFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [users, roleFilter, search]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,18 +68,26 @@ export default function UsersPage() {
         setUsers((prev) => [data, ...prev]);
         setForm({ name: "", email: "", password: "", role: "SALES" });
         setShowForm(false);
+        toast.success("Utilisateur créé");
       } else {
-        alert(data.error || "Erreur lors de la création");
+        toast.error(data.error || "Erreur lors de la création");
       }
     } catch {
-      alert("Erreur réseau");
+      toast.error("Erreur réseau");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleToggleStatus = async (user: User) => {
+    if (currentUser && user.id === currentUser.id) {
+      toast.warning("Vous ne pouvez pas désactiver votre propre compte");
+      return;
+    }
     const newStatus = user.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
-    if (!confirm(`${newStatus === "DISABLED" ? "Désactiver" : "Activer"} cet utilisateur ?`)) return;
+    const action = newStatus === "DISABLED" ? "désactiver" : "activer";
+    const ok = await confirm(`Voulez-vous ${action} ${user.name} ?`);
+    if (!ok) return;
 
     const res = await fetch(`/api/users?id=${user.id}`, {
       method: "PUT",
@@ -89,135 +96,132 @@ export default function UsersPage() {
     });
     if (res.ok) {
       setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, status: newStatus } : u));
+      toast.success(`Utilisateur ${action === "désactiver" ? "désactivé" : "activé"}`);
+    } else {
+      toast.error("Erreur lors de la modification");
     }
   };
 
+  if (loading) {
+    return (
+      <div className="no-print">
+        <header className="bg-white border-b-2 border-navy px-5 py-3"><Skeleton className="h-6 w-48" /></header>
+        <main className="max-w-6xl mx-auto px-5 py-6"><SkeletonTable rows={6} /></main>
+      </div>
+    );
+  }
+
   return (
-    <main className="max-w-[1440px] mx-auto px-5 pb-10">
-      <nav className="flex items-center justify-between flex-wrap gap-2 py-3 border-b-2 border-navy mb-5 sticky top-0 bg-bg z-50">
-        <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-3 py-1.5 rounded hover:bg-navy/5">
-          &#8592; Retour
-        </button>
-        <span className="text-[15px] font-bold text-navy">Gestion des utilisateurs</span>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l"
-        >
-          {showForm ? "Annuler" : "+ Nouvel utilisateur"}
-        </button>
-      </nav>
-
-      {/* Create form */}
-      {showForm && (
-        <div className="bg-white border border-bdr rounded-xl p-5 mb-5">
-          <h3 className="text-xs font-bold text-navy uppercase tracking-wide mb-3">Créer un utilisateur</h3>
-          <form onSubmit={handleCreate} className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">Nom</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                required
-                className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">Email</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                required
-                className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">Mot de passe</label>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                required
-                minLength={8}
-                className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">Rôle</label>
-              <select
-                value={form.role}
-                onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-                className="w-full px-2.5 py-2 border border-bdr rounded text-xs"
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>{roleLabel(r)}</option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-2 md:col-span-4">
-              <button
-                type="submit"
-                disabled={saving}
-                className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l disabled:opacity-50"
-              >
-                {saving ? "Création..." : "Créer"}
-              </button>
-            </div>
-          </form>
+    <div className="no-print">
+      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={() => router.push("/")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+            <ArrowLeft className="w-4 h-4 text-navy" />
+          </button>
+          <h1 className="text-sm font-bold text-navy">Gestion des utilisateurs</h1>
+          <Badge color="bg-navy/10 text-navy">{users.length}</Badge>
         </div>
-      )}
+        <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)}>
+          {showForm ? <><X className="w-3.5 h-3.5" /> Annuler</> : <><UserPlus className="w-3.5 h-3.5" /> Nouvel utilisateur</>}
+        </Button>
+      </header>
 
-      {/* Users list */}
-      {loading ? (
-        <div className="text-center py-10 text-txt2">Chargement...</div>
-      ) : users.length === 0 ? (
-        <div className="text-center py-10 text-txt2">Aucun utilisateur.</div>
-      ) : (
-        <div className="bg-white border border-bdr rounded-[10px] overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-navy text-white text-[10px] uppercase tracking-wide">
-                <th className="text-left py-3 px-4">Nom</th>
-                <th className="text-left py-3 px-4">Email</th>
-                <th className="text-left py-3 px-4">Rôle</th>
-                <th className="text-center py-3 px-4">Statut</th>
-                <th className="text-left py-3 px-4">Dernière connexion</th>
-                <th className="text-right py-3 px-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-bdr/50 hover:bg-gray-50 transition-colors">
-                  <td className="py-3 px-4 font-semibold text-navy">{u.name}</td>
-                  <td className="py-3 px-4 text-txt2">{u.email}</td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${roleColor(u.role)}`}>
-                      {roleLabel(u.role)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${u.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {u.status === "ACTIVE" ? "Actif" : "Inactif"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-txt2 text-[10px]">
-                    {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString("fr-FR") : "—"}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => handleToggleStatus(u)}
-                      className={`text-[10px] font-semibold ${u.status === "ACTIVE" ? "text-red hover:underline" : "text-green-700 hover:underline"}`}
-                    >
-                      {u.status === "ACTIVE" ? "Désactiver" : "Activer"}
-                    </button>
-                  </td>
+      <main className="max-w-6xl mx-auto px-5 py-6 space-y-4">
+        {showForm && (
+          <Card>
+            <SectionTitle icon={<UserPlus className="w-3 h-3" />}>Nouvel utilisateur</SectionTitle>
+            <form onSubmit={handleCreate}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Field label="Nom" value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} required />
+                <Field label="Email" value={form.email} onChange={(v) => setForm((p) => ({ ...p, email: v }))} type="email" required />
+                <Field label="Mot de passe" value={form.password} onChange={(v) => setForm((p) => ({ ...p, password: v }))} type="password" required helpText="Minimum 8 caractères" />
+                <Select label="Rôle" value={form.role} onChange={(v) => setForm((p) => ({ ...p, role: v }))} options={[
+                  { value: "OWNER", label: "Propriétaire" },
+                  { value: "IT_ADMIN", label: "Admin IT" },
+                  { value: "ADMIN", label: "Administrateur" },
+                  { value: "SALES", label: "Vente" },
+                  { value: "ASSISTANT", label: "Assistant" },
+                  { value: "DELIVERY", label: "Livreur" },
+                  { value: "VIEWER", label: "Lecteur" },
+                ]} />
+              </div>
+              <div className="mt-3">
+                <Button type="submit" variant="primary" size="sm" loading={saving}>Créer</Button>
+              </div>
+            </form>
+          </Card>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par nom ou email..." />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {["ALL", "OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
+                roleFilter === r ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
+              }`}
+            >
+              {r === "ALL" ? "Tous" : roleLabel(r)}
+            </button>
+          ))}
+        </div>
+
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-bdr">
+                  <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Utilisateur</th>
+                  <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Rôle</th>
+                  <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                  <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Dernière connexion</th>
+                  <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </main>
+              </thead>
+              <tbody>
+                {filtered.map((u) => (
+                  <tr key={u.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
+                    <td className="py-2">
+                      <div className="flex items-center gap-2">
+                        <Avatar name={u.name} size="sm" />
+                        <div>
+                          <p className="text-xs font-semibold text-navy">{u.name}</p>
+                          <p className="text-[10px] text-txt2">{u.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2"><Badge color={roleColor(u.role)}>{roleLabel(u.role)}</Badge></td>
+                    <td className="py-2">
+                      <Badge color={u.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}>
+                        {u.status === "ACTIVE" ? "Actif" : "Désactivé"}
+                      </Badge>
+                    </td>
+                    <td className="py-2 text-xs text-txt2">
+                      {u.lastLoginAt ? relativeTime(u.lastLoginAt) : "Jamais"}
+                    </td>
+                    <td className="py-2 text-right">
+                      <Button
+                        variant={u.status === "ACTIVE" ? "danger" : "secondary"}
+                        size="sm"
+                        onClick={() => handleToggleStatus(u)}
+                        disabled={currentUser?.id === u.id}
+                      >
+                        {u.status === "ACTIVE" ? "Désactiver" : "Activer"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </main>
+    </div>
   );
 }

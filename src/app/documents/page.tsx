@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { fmtDate, fmtNum } from "@/lib/utils";
+import { ArrowLeft, FileText, Trash2 } from "lucide-react";
+import { Card, Badge, SearchInput, Skeleton, SkeletonTable, EmptyState } from "@/components/ui";
+import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { fmtNum } from "@/lib/utils";
 
 interface Doc {
   id: string;
@@ -11,168 +16,180 @@ interface Doc {
   date: string;
   total: number;
   status: string;
-  saleMode?: string;
-  clientName?: string;
+  customerName?: string;
   createdAt: string;
 }
 
 export default function DocumentsPage() {
   const router = useRouter();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [docs, setDocs] = useState<Doc[]>([]);
-  const [filter, setFilter] = useState<"ALL" | "PROFORMA" | "DEFINITIVE" | "BL">("ALL");
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "PROFORMA" | "DEFINITIVE" | "BL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "DRAFT" | "FINALIZED" | "CANCELLED">("ALL");
 
   useEffect(() => {
     Promise.all([
+      fetch("/api/auth/me").then((r) => r.json()),
       fetch("/api/documents?type=PROFORMA").then((r) => r.json()),
       fetch("/api/documents?type=DEFINITIVE").then((r) => r.json()),
       fetch("/api/delivery").then((r) => r.json()),
     ])
-      .then(([pf, df, bl]) => {
+      .then(([me, pf, df, bl]) => {
+        if (!me.user) { router.push("/login"); return; }
         const pfDocs = (Array.isArray(pf) ? pf : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "PROFORMA", date: String(d.date),
           total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
-          clientName: String(d.customerName || ""),
+          customerName: String(d.customerName || ""),
         }));
         const dfDocs = (Array.isArray(df) ? df : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "DEFINITIVE", date: String(d.date),
-          total: Number(d.total), status: String(d.status), saleMode: String(d.saleMode), createdAt: String(d.createdAt),
-          clientName: String(d.customerName || ""),
+          total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
+          customerName: String(d.customerName || ""),
         }));
         const blDocs = (Array.isArray(bl) ? bl : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
           total: 0, status: String(d.status), createdAt: String(d.createdAt),
-          clientName: String(d.customerName || ""),
+          customerName: String(d.customerName || ""),
         }));
         const all = [...pfDocs, ...dfDocs, ...blDocs]
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          .sort((a: Doc, b: Doc) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setDocs(all);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => { router.push("/login"); });
+  }, [router]);
 
-  const filtered = filter === "ALL" ? docs : docs.filter((d) => d.type === filter);
-
-  const typeLabel = (t: string) => {
-    if (t === "PROFORMA") return "Pro Forma";
-    if (t === "DEFINITIVE") return "Définitive";
-    return "Bon de Livraison";
-  };
-
-  const typeColor = (t: string) => {
-    if (t === "PROFORMA") return "bg-navy/10 text-navy";
-    if (t === "DEFINITIVE") return "bg-blue-100 text-blue-700";
-    return "bg-gold/20 text-navy";
-  };
-
-  const statusLabel = (s: string) => {
-    if (s === "DRAFT") return "Brouillon";
-    if (s === "FINALIZED") return "Finalisé";
-    if (s === "CANCELLED") return "Annulé";
-    return s;
-  };
+  const filtered = useMemo(() => {
+    return docs.filter((d) => {
+      if (typeFilter !== "ALL" && d.type !== typeFilter) return false;
+      if (statusFilter !== "ALL" && d.status !== statusFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!d.num.toLowerCase().includes(q) && !(d.customerName || "").toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [docs, typeFilter, statusFilter, search]);
 
   const handleDelete = async (id: string, type: string) => {
-    if (!confirm("Supprimer ce document ? Cette action est irréversible.")) return;
+    const ok = await confirm("Supprimer ce document ? Cette action est irréversible.");
+    if (!ok) return;
     const endpoint = type === "BL" ? "/api/delivery" : "/api/documents";
     const res = await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
     if (res.ok) {
       setDocs((prev) => prev.filter((d) => d.id !== id));
+      toast.success("Document supprimé");
     } else {
-      alert("Erreur lors de la suppression.");
+      toast.error("Erreur lors de la suppression");
     }
   };
 
-  const handleOpen = (doc: Doc) => {
-    if (doc.type === "PROFORMA") router.push(`/proforma?id=${doc.id}`);
-    else if (doc.type === "DEFINITIVE") router.push(`/definitive?id=${doc.id}`);
-    else router.push(`/bl?id=${doc.id}`);
+  const openDoc = (d: Doc) => {
+    if (d.type === "BL") router.push("/bl");
+    else router.push(`/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`);
   };
 
-  return (
-    <main className="max-w-[1440px] mx-auto px-5 pb-10">
-      <nav className="flex items-center justify-between flex-wrap gap-2 py-3 border-b-2 border-navy mb-5 sticky top-0 bg-bg z-50">
-        <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-3 py-1.5 rounded hover:bg-navy/5">
-          &#8592; Retour
-        </button>
-        <span className="text-[15px] font-bold text-navy">Tous les documents</span>
-        <div />
-      </nav>
-
-      {/* Filters */}
-      <div className="flex gap-2 mb-5 flex-wrap">
-        {(["ALL", "PROFORMA", "DEFINITIVE", "BL"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-md text-xs font-semibold border transition-colors ${
-              filter === f
-                ? "bg-navy text-white border-navy"
-                : "bg-white text-navy border-bdr hover:border-navy"
-            }`}
-          >
-            {f === "ALL" ? "Tous" : typeLabel(f)}
-          </button>
-        ))}
-        <span className="ml-auto text-xs text-txt2 self-center">{filtered.length} document(s)</span>
+  if (loading) {
+    return (
+      <div className="no-print">
+        <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
+          <Skeleton className="h-6 w-32" />
+        </header>
+        <main className="max-w-6xl mx-auto px-5 py-6"><SkeletonTable rows={8} /></main>
       </div>
+    );
+  }
 
-      {loading ? (
-        <div className="text-center py-10 text-txt2">Chargement...</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-10 text-txt2">Aucun document trouvé.</div>
-      ) : (
-        <div className="bg-white border border-bdr rounded-[10px] overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-navy text-white text-[10px] uppercase tracking-wide">
-                <th className="text-left py-3 px-4">N°</th>
-                <th className="text-left py-3 px-4">Type</th>
-                <th className="text-left py-3 px-4">Date</th>
-                <th className="text-left py-3 px-4">Client</th>
-                <th className="text-right py-3 px-4">Total</th>
-                <th className="text-center py-3 px-4">Statut</th>
-                <th className="text-right py-3 px-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((doc) => (
-                <tr key={doc.id} className="border-b border-bdr/50 hover:bg-gray-50 transition-colors">
-                  <td className="py-3 px-4 font-bold text-navy">{doc.num}</td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${typeColor(doc.type)}`}>
-                      {typeLabel(doc.type)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-txt2">{fmtDate(doc.date)}</td>
-                  <td className="py-3 px-4 text-txt2">{doc.clientName || "—"}</td>
-                  <td className="py-3 px-4 text-right font-bold text-navy">
-                    {doc.total ? fmtNum(doc.total) + " F" : "—"}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="text-[10px] text-txt2">{statusLabel(doc.status)}</span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => handleOpen(doc)}
-                      className="text-navy hover:underline mr-3 font-semibold"
-                    >
-                      Ouvrir
-                    </button>
-                    <button
-                      onClick={() => handleDelete(doc.id, doc.type)}
-                      className="text-red hover:underline font-semibold"
-                    >
-                      Supprimer
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+  return (
+    <div className="no-print">
+      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
+        <button onClick={() => router.push("/")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+          <ArrowLeft className="w-4 h-4 text-navy" />
+        </button>
+        <h1 className="text-sm font-bold text-navy">Tous les documents</h1>
+        <Badge color="bg-navy/10 text-navy">{docs.length}</Badge>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-5 py-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par numéro ou client..." />
+          </div>
         </div>
-      )}
-    </main>
+
+        <div className="flex flex-wrap gap-2">
+          <span className="text-[10px] font-semibold text-txt2 uppercase tracking-wide self-center mr-1">Type:</span>
+          {(["ALL", "PROFORMA", "DEFINITIVE", "BL"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
+                typeFilter === t ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
+              }`}
+            >
+              {t === "ALL" ? "Tous" : typeLabel(t)}
+            </button>
+          ))}
+          <span className="w-px h-5 bg-bdr mx-1 self-center" />
+          <span className="text-[10px] font-semibold text-txt2 uppercase tracking-wide self-center mr-1">Statut:</span>
+          {(["ALL", "DRAFT", "FINALIZED", "CANCELLED"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
+                statusFilter === s ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
+              }`}
+            >
+              {s === "ALL" ? "Tous" : statusLabel(s)}
+            </button>
+          ))}
+        </div>
+
+        <Card>
+          {filtered.length === 0 ? (
+            <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document trouvé." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-bdr">
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Date</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
+                    <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                    <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((d) => (
+                    <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
+                      <td className="py-2 text-xs font-semibold text-navy cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
+                      <td className="py-2"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
+                      <td className="py-2 text-xs text-txt2">{relativeTime(d.createdAt)}</td>
+                      <td className="py-2 text-xs text-txt2">{d.customerName || "—"}</td>
+                      <td className="py-2 text-xs text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
+                      <td className="py-2"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+                      <td className="py-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => openDoc(d)} className="text-[11px] text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>
+                          <button onClick={() => handleDelete(d.id, d.type)} className="p-1 text-red/60 hover:text-red transition-colors cursor-pointer">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </main>
+    </div>
   );
 }

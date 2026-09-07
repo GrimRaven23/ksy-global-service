@@ -166,6 +166,29 @@ body {
 /* Copy banner */
 .copy-banner { background: var(--color-navy); color: var(--color-gold-lt); text-align: center; padding: 7px 0; font-size: 10.5px; font-weight: 700; letter-spacing: .8px; position: relative; z-index: 20; }
 
+/* ─── Animations ─────────────────────────────────────────── */
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-slide-in { animation: slide-in 0.25s ease-out; }
+.animate-slide-up { animation: slide-up 0.2s ease-out; }
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
+
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
 /* ════════════════════════════════════════════════════════════════
    PRINT OVERRIDES
    ════════════════════════════════════════════════════════════════ */

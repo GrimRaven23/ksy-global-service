@@ -87,10 +87,12 @@ export function numToWords(n: number): string {
     if (v <= 20) return o[v];
     const a = Math.floor(v / 10);
     const b = v % 10;
-    if (a === 7)
+    if (a === 7) {
       return "soixante" + (b === 0 ? "-dix" : b === 1 ? " et onze" : "-" + o[v - 60]);
-    if (a === 9)
+    }
+    if (a === 9) {
       return "quatre-vingt" + (b === 0 ? "-dix" : b === 1 ? "-onze" : "-" + o[v - 80]);
+    }
     const s = t[a];
     if (b === 1 && a >= 2 && a <= 6) return s + " et un";
     return s + (b ? "-" + o[b] : "");

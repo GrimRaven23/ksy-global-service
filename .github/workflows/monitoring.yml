@@ -1,0 +1,69 @@
+name: Monitoring
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check application health
+        run: |
+          URL="${{ vars.DEPLOYMENT_URL || 'https://ksy-global-service.vercel.app' }}"
+          echo "Checking health at: $URL/api/health"
+          
+          RESPONSE=$(curl -s -o /tmp/health.json -w "%{http_code}" "$URL/api/health" --max-time 30)
+          HTTP_CODE=$RESPONSE
+          
+          cat /tmp/health.json
+          echo ""
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Health check PASSED (HTTP $HTTP_CODE)"
+          elif [ "$HTTP_CODE" = "503" ]; then
+            echo "Health check DEGRADED (HTTP $HTTP_CODE)"
+            exit 1
+          else
+            echo "Health check FAILED (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Check login endpoint
+        run: |
+          URL="${{ vars.DEPLOYMENT_URL || 'https://ksy-global-service.vercel.app' }}"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/auth/me" --max-time 15)
+          
+          if [ "$RESPONSE" = "401" ] || [ "$RESPONSE" = "302" ]; then
+            echo "Login endpoint accessible (HTTP $RESPONSE)"
+          else
+            echo "Login endpoint issue (HTTP $RESPONSE)"
+            exit 1
+          fi
+
+  security-scan:
+    name: Periodic Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check for dependency vulnerabilities
+        run: npm audit --audit-level=critical
+        continue-on-error: true
+
+      - name: Verify no secrets in source
+        run: |
+          if grep -rn "password.*=.*['\"]" src/ --include="*.ts" --include="*.tsx" | grep -v "passwordHash" | grep -v "password:" | grep -v "// " | grep -v "verifyPassword" | grep -v "hashPassword" | grep -v "password\b.*z\." | grep -v "test" | grep -v "min("; then
+            echo "WARNING: Potential hardcoded secrets found"
+            exit 1
+          fi
+          echo "No hardcoded secrets detected"

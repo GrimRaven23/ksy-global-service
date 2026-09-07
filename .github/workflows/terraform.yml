@@ -1,0 +1,49 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269571ab
+        with:
+          terraform_version: "1.8"
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check
+
+      - name: Terraform init
+        run: terraform init
+        env:
+          TF_CLOUD_ORGANIZATION: "ksy-global"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -out=tfplan
+        if: github.event_name == 'pull_request'
+        env:
+          TF_VAR_vercel_api_token: ${{ secrets.VERCEL_API_TOKEN }}
+          TF_VAR_vercel_team_id: ${{ secrets.VERCEL_TEAM_ID }}
+          TF_VAR_supabase_access_token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          TF_VAR_supabase_project_ref: ${{ secrets.SUPABASE_PROJECT_REF }}
+          TF_VAR_database_password: ${{ secrets.DATABASE_PASSWORD }}
+          TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}

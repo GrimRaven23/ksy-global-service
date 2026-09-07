@@ -7,14 +7,17 @@
     "build": "npx prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
+    "analyze": "ANALYZE=true npm run build",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@next/bundle-analyzer": "^16.3.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
     "@types/pg": "^8.23.1",

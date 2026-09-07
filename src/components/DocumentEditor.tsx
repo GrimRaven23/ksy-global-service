@@ -271,9 +271,10 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     router.push(isPF ? "/proforma" : "/definitive");
   };
 
-  if (loadError) return (
-    <main className="no-print">
-      <div className="max-w-[600px] mx-auto mt-20 px-5 text-center">
+  if (loadError) {
+    return (
+      <main className="no-print">
+        <div className="max-w-[600px] mx-auto mt-20 px-5 text-center">
         <div className="bg-white border border-red-200 rounded-xl p-8">
           <div className="text-red-500 text-4xl mb-4">⚠</div>
           <h2 className="text-sm font-bold text-red-700 mb-2">Erreur de chargement</h2>
@@ -289,7 +290,8 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
         </div>
       </div>
     </main>
-  );
+    );
+  }
 
   if (!company) return <div className="p-10 text-center text-txt2">Chargement...</div>;
 

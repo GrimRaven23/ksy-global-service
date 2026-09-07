@@ -1,0 +1,70 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 4"
+
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: github/codeql-action/init@4dd16135b69a43b6c8efb853346f8437d92d3c93
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - uses: github/codeql-action/autobuild@4dd16135b69a43b6c8efb853346f8437d92d3c93
+
+      - uses: github/codeql-action/analyze@4dd16135b69a43b6c8efb853346f8437d92d3c93
+        with:
+          category: "/language:javascript-typescript"
+
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+        continue-on-error: false
+
+      - name: Check for known vulnerabilities
+        run: npx audit-ci --high
+        continue-on-error: true
+
+  secrets-check:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          if grep -rn "password.*=.*['\"]" src/ --include="*.ts" --include="*.tsx" | grep -v "passwordHash" | grep -v "password:" | grep -v "// " | grep -v "verifyPassword" | grep -v "hashPassword" | grep -v "password\b.*z\." | grep -v "test"; then
+            echo "WARNING: Potential hardcoded passwords found"
+            exit 1
+          fi
+          echo "No hardcoded secrets detected"

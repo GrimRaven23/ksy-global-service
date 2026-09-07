@@ -48,6 +48,26 @@ interface Company {
   compte: string;
 }
 
+const DEFAULT_COMPANY: Company = {
+  name: "KSY GLOBAL SERVICE",
+  slogan: "KNOWLEDGE • SERVICE • YIELD",
+  activite: "",
+  address: "",
+  city: "Dakar, Sénégal",
+  phone: "",
+  phone2: "",
+  email: "",
+  web: "",
+  rccm: "",
+  ninea: "",
+  ifu: "",
+  bank: "",
+  bkName: "",
+  iban: "",
+  swift: "",
+  compte: "",
+};
+
 const blankBLProduct = (): BLProduct => ({ designation: "", quantity: "", observation: "" });
 
 function blankBL(): BLData {
@@ -94,7 +114,7 @@ export default function BLEditor() {
       }) : Promise.resolve(null),
     ]).then(([comp, existing]) => {
       if (cancelled) return;
-      if (comp && !comp.error) setCompany(comp);
+      setCompany(comp && !comp.error ? comp : DEFAULT_COMPANY);
       if (existing && existing.id) {
         setDoc({
           id: existing.id,

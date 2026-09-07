@@ -20,9 +20,10 @@ function verifySessionToken(token: string, secret: string): Record<string, unkno
   try {
     const [payloadB64, signature] = token.split(".");
     if (!payloadB64 || !signature) return null;
-    const expected = sign(payloadB64, secret);
+    const rawPayload = Buffer.from(payloadB64, "base64url").toString();
+    const expected = sign(rawPayload, secret);
     if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
-    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString());
+    const payload = JSON.parse(rawPayload);
     if (payload.exp && Date.now() / 1000 > payload.exp) return null;
     return payload;
   } catch {

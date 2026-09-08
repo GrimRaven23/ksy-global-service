@@ -47,11 +47,14 @@ export async function PUT(
 ) {
   try {
     const user = await requireAuth();
-    if (!hasPermission(user.role, "users.update")) {
+
+    const { id } = await params;
+    const isSelf = id === user.id;
+
+    if (!isSelf && !hasPermission(user.role, "users.update")) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const { id } = await params;
     const body = await request.json();
     const { name, email, role, status } = body as {
       name?: string; email?: string; role?: string; status?: string;
@@ -62,22 +65,30 @@ export async function PUT(
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
     }
 
-    if (role && role !== target.role) {
-      if (!canManageRole(user.role, role)) {
-        return NextResponse.json(
-          { error: "Vous ne pouvez pas attribuer ce niveau d'accès" },
-          { status: 403 }
-        );
+    const updateData: Record<string, unknown> = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+
+    if (!isSelf) {
+      if (role && role !== target.role) {
+        if (!canManageRole(user.role, role)) {
+          return NextResponse.json(
+            { error: "Vous ne pouvez pas attribuer ce niveau d'accès" },
+            { status: 403 }
+          );
+        }
+        if (target.role === "OWNER" && user.role !== "OWNER") {
+          return NextResponse.json(
+            { error: "Seul le propriétaire peut modifier un autre propriétaire" },
+            { status: 403 }
+          );
+        }
       }
-      if (target.role === "OWNER" && user.role !== "OWNER") {
-        return NextResponse.json(
-          { error: "Seul le propriétaire peut modifier un autre propriétaire" },
-          { status: 403 }
-        );
-      }
+      if (role) updateData.role = role;
+      if (status) updateData.status = status;
     }
 
-    if (status === "DISABLED" && target.role === "OWNER") {
+    if (!isSelf && status === "DISABLED" && target.role === "OWNER") {
       const activeOwners = await prisma.user.count({ where: { role: "OWNER", status: "ACTIVE" } });
       if (activeOwners <= 1) {
         return NextResponse.json({ error: "Impossible de désactiver le dernier propriétaire actif" }, { status: 400 });
@@ -90,12 +101,6 @@ export async function PUT(
         return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
       }
     }
-
-    const updateData: Record<string, unknown> = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (role) updateData.role = role;
-    if (status) updateData.status = status;
 
     const updated = await prisma.user.update({
       where: { id },

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FileText, Receipt, Truck, LogOut, BarChart3, Clock, Activity, User } from "lucide-react";
 import { Card, Badge, Button, Avatar, Skeleton, EmptyState, SectionTitle } from "@/components/ui";
 import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
+import { ROLE_PERMISSIONS, type Permission } from "@/lib/types";
 import { fmtNum } from "@/lib/utils";
 
 interface Doc {
@@ -96,10 +97,13 @@ export default function Home() {
     router.refresh();
   };
 
+  const userPerms: Permission[] = user ? ROLE_PERMISSIONS[user.role] || [] : [];
+  const can = (p: Permission) => userPerms.includes(p);
+
   const quickActions = [
-    { label: "Nouvelle Pro Forma", desc: "Créer une facture pro forma", icon: FileText, href: "/proforma", color: "bg-navy/5 text-navy" },
-    { label: "Nouvelle Définitive", desc: "Créer une facture définitive", icon: Receipt, href: "/definitive", color: "bg-blue-50 text-blue-600" },
-    { label: "Nouveau Bon de Livraison", desc: "Créer un bon de livraison", icon: Truck, href: "/bl", color: "bg-gold/10 text-gold" },
+    ...(can("proforma.create") ? [{ label: "Nouvelle Pro Forma", desc: "Créer une facture pro forma", icon: FileText, href: "/proforma", color: "bg-navy/5 text-navy" }] : []),
+    ...(can("proforma.create") ? [{ label: "Nouvelle Définitive", desc: "Créer une facture définitive", icon: Receipt, href: "/definitive", color: "bg-blue-50 text-blue-600" }] : []),
+    ...(can("delivery.create") ? [{ label: "Nouveau Bon de Livraison", desc: "Créer un bon de livraison", icon: Truck, href: "/bl", color: "bg-gold/10 text-gold" }] : []),
   ];
 
   if (loading) {
@@ -169,24 +173,26 @@ export default function Home() {
           ))}
         </div>
 
-        <div>
-          <h2 className="text-xs font-bold text-navy uppercase tracking-wide mb-3">Créer un document</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {quickActions.map((a) => (
-              <button
-                key={a.href}
-                onClick={() => router.push(a.href)}
-                className="bg-white border border-bdr rounded-[10px] p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
-              >
-                <div className={`w-12 h-12 rounded-xl ${a.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                  <a.icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-bold text-navy mb-1">{a.label}</h3>
-                <p className="text-[11px] text-txt2">{a.desc}</p>
-              </button>
-            ))}
+        {quickActions.length > 0 && (
+          <div>
+            <h2 className="text-xs font-bold text-navy uppercase tracking-wide mb-3">Créer un document</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {quickActions.map((a) => (
+                <button
+                  key={a.href}
+                  onClick={() => router.push(a.href)}
+                  className="bg-white border border-bdr rounded-[10px] p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
+                >
+                  <div className={`w-12 h-12 rounded-xl ${a.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                    <a.icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-bold text-navy mb-1">{a.label}</h3>
+                  <p className="text-[11px] text-txt2">{a.desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
@@ -249,10 +255,11 @@ export default function Home() {
 
         <div className="flex gap-2 flex-wrap">
           {[
-            { label: "Gestion de l'entreprise", href: "/gestion", highlight: true },
-            { label: "Tous les documents", href: "/documents" },
-            { label: "Journal d'audit", href: "/audit" },
-            { label: "Paramètres", href: "/settings" },
+            ...((user?.role === "OWNER" || user?.role === "IT_ADMIN" || user?.role === "ADMIN") ? [{ label: "Gestion de l'entreprise", href: "/gestion", highlight: true }] : []),
+            ...(can("documents.read") ? [{ label: "Tous les documents", href: "/documents" }] : []),
+            ...(can("audit.read") ? [{ label: "Journal d'audit", href: "/audit" }] : []),
+            ...(can("company.read") ? [{ label: "Paramètres", href: "/settings" }] : []),
+            { label: "Mon compte", href: "/account" },
           ].map((l) => (
             <button
               key={l.href}

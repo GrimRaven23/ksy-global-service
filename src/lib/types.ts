@@ -276,11 +276,13 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "documents.read", "documents.create", "documents.update", "documents.print",
     "proforma.create", "proforma.convert",
     "customers.read", "customers.create", "customers.update",
+    "company.read",
     "delivery.read", "delivery.print",
   ],
   PROJECT_MANAGER: [
     "documents.read", "documents.print",
     "customers.read",
+    "company.read",
     "delivery.read", "delivery.create", "delivery.update", "delivery.confirm", "delivery.print",
     "reports.view",
     "inventory.read",
@@ -289,6 +291,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "documents.read", "documents.create", "documents.update",
     "proforma.create",
     "customers.read", "customers.create", "customers.update",
+    "company.read",
     "delivery.read",
   ],
   COMPLIANCE: [
@@ -301,6 +304,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   DELIVERY: [
     "documents.read",
     "customers.read",
+    "company.read",
     "delivery.read", "delivery.update", "delivery.confirm", "delivery.print",
     "inventory.read",
   ],

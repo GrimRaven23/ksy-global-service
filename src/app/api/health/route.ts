@@ -7,9 +7,8 @@ export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = "ok";
-  } catch (e) {
+  } catch {
     checks.database = "error";
-    checks.dbError = e instanceof Error ? e.message : String(e);
   }
 
   const healthy = checks.database === "ok";

@@ -1,6 +1,9 @@
 import crypto from "crypto";
 
-const CSRF_SECRET = process.env.SESSION_SECRET || "fallback-csrf-secret";
+const CSRF_SECRET = process.env.SESSION_SECRET!;
+if (!CSRF_SECRET) {
+  throw new Error("SESSION_SECRET is required for CSRF protection");
+}
 const CSRF_MAX_AGE = 60 * 60; // 1 hour
 
 export function generateCsrfToken(): string {

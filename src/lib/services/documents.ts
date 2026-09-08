@@ -183,5 +183,13 @@ export async function listDocuments(type?: string) {
 }
 
 export async function deleteDocument(id: string) {
+  const doc = await prisma.document.findUnique({
+    where: { id },
+    select: { id: true, deliveryNotes: { select: { id: true } } },
+  });
+  if (!doc) throw new Error("Document not found");
+  if (doc.deliveryNotes.length > 0) {
+    throw new Error("Cannot delete document with linked delivery notes. Delete the delivery notes first.");
+  }
   return prisma.document.delete({ where: { id } });
 }

@@ -149,7 +149,6 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  response.headers.set("X-User-Role", String(payload.role || ""));
   return addSecurityHeaders(response);
 }
 

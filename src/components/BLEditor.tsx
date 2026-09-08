@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
 import { fmtDate, todayStr, esc, curYear, padN } from "@/lib/utils";
+import AppShell from "@/components/AppShell";
 import { SectionTitle, Field, Button } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -234,27 +235,29 @@ export default function BLEditor() {
 
   if (loadError) {
     return (
-      <main className="no-print">
-        <div className="max-w-[600px] mx-auto mt-20 px-5 text-center">
-        <div className="bg-white border border-red-200 rounded-xl p-8">
-          <div className="text-red-500 text-4xl mb-4">⚠</div>
-          <h2 className="text-sm font-bold text-red-700 mb-2">Erreur de chargement</h2>
-          <p className="text-xs text-txt2 mb-4">{loadError}</p>
-          <div className="flex gap-2 justify-center">
-            <button onClick={() => router.push("/")} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
-              Retour au tableau de bord
-            </button>
-            <button onClick={() => window.location.reload()} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
-              Réessayer
-            </button>
+      <AppShell hideNav>
+        <main className="no-print">
+          <div className="max-w-[600px] mx-auto mt-20 px-5 text-center">
+          <div className="bg-white border border-red-200 rounded-xl p-8">
+            <div className="text-red-500 text-4xl mb-4">⚠</div>
+            <h2 className="text-sm font-bold text-red-700 mb-2">Erreur de chargement</h2>
+            <p className="text-xs text-txt2 mb-4">{loadError}</p>
+            <div className="flex gap-2 justify-center">
+              <button onClick={() => router.push("/")} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
+                Retour au tableau de bord
+              </button>
+              <button onClick={() => window.location.reload()} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
+                Réessayer
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+      </AppShell>
     );
   }
 
-  if (!company) return <div className="p-10 text-center text-txt2">Chargement...</div>;
+  if (!company) return <AppShell hideNav><div className="p-10 text-center text-txt2">Chargement...</div></AppShell>;
 
   const renderCopy = (copyLabel: string) => (
     <div className="doc-page text-[9pt]" style={{ transformOrigin: "top left", transform: "scale(0.55)" }}>
@@ -385,72 +388,74 @@ export default function BLEditor() {
   );
 
   return (
-    <>
+    <AppShell hideNav>
       <main className="no-print">
-        <nav className="flex items-center justify-between flex-wrap gap-2 py-3 border-b-2 border-navy mb-5 sticky top-0 bg-bg z-50 max-w-[1440px] mx-auto px-5">
-          <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-3 py-1.5 rounded hover:bg-navy/5">
-            &#8592; Retour
-          </button>
-          <span className="text-[15px] font-bold text-navy">Bon de Livraison</span>
-          <div className="flex items-center gap-2.5">
-            <span className="text-[11px] font-semibold text-gold bg-navy px-3 py-1 rounded text-xs">{docNum}</span>
-            <button onClick={handleNew} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
-              Nouveau
+        <nav className="sticky top-0 z-50 bg-bg border-b border-bdr">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 py-2.5 flex items-center justify-between gap-2">
+            <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-2 py-1.5 rounded hover:bg-navy/5 shrink-0">
+              &#8592; <span className="hidden sm:inline">Retour</span>
             </button>
-            <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave}>
-              <Save className="w-3.5 h-3.5" /> Enregistrer
-            </Button>
-            <button onClick={() => handlePrint(1)} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
-              Imprimer (1 ex.)
-            </button>
-            <button onClick={() => handlePrint(2)} className="bg-gold text-navy border-none px-4 py-2 rounded-md text-xs font-bold cursor-pointer hover:bg-[#b89840]">
-              Imprimer 2 exemplaires
-            </button>
+            <span className="text-[13px] sm:text-[15px] font-bold text-navy truncate">Bon de Livraison</span>
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
+              <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
+                Nouveau
+              </button>
+              <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave}>
+                <Save className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Enregistrer</span>
+              </Button>
+              <button onClick={() => handlePrint(1)} className="bg-navy text-white border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy-l">
+                1 ex.
+              </button>
+              <button onClick={() => handlePrint(2)} className="bg-gold text-navy border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-[#b89840]">
+                2 ex.
+              </button>
+            </div>
           </div>
         </nav>
 
-        <div className="max-w-[1440px] mx-auto px-5 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 py-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <div className="flex flex-col gap-3.5">
             {/* Delivery info */}
-            <section className="bg-white border border-bdr rounded-[10px] p-4">
+            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Informations de livraison</SectionTitle>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="N° du bon" value={doc.num} placeholder="BL-2026-001" onChange={(v) => updateField("num", v)} />
                 <Field label="Date de livraison" type="date" value={doc.date} onChange={(v) => updateField("date", v)} />
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Référence facture associée" value={doc.ref} placeholder="FAC-2026-001" onChange={(v) => updateField("ref", v)} />
                 <Field label="Référence commande" value={doc.orderRef} placeholder="REF-2026/001" onChange={(v) => updateField("orderRef", v)} />
               </div>
             </section>
 
             {/* Driver */}
-            <section className="bg-white border border-bdr rounded-[10px] p-4">
+            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Livreur</SectionTitle>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Nom du livreur" value={doc.driver} placeholder="Nom du livreur" onChange={(v) => updateField("driver", v)} />
                 <Field label="Téléphone" value={doc.driverPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("driverPhone", v)} />
               </div>
             </section>
 
             {/* Client */}
-            <section className="bg-white border border-bdr rounded-[10px] p-4">
+            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Client / Destinataire</SectionTitle>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} />
                 <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} />
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Email" type="email" value={doc.clientEmail} placeholder="client@example.com" onChange={(v) => updateField("clientEmail", v)} />
                 <Field label="Adresse de livraison" value={doc.clientAddr} placeholder="Adresse complète" onChange={(v) => updateField("clientAddr", v)} />
               </div>
             </section>
 
             {/* Products */}
-            <section className="bg-white border border-bdr rounded-[10px] p-4">
+            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Articles livrés</SectionTitle>
-              <div className="overflow-x-auto mb-2">
-                <table className="w-full border-collapse text-[11px]">
+              <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-2">
+                <table className="w-full border-collapse text-[11px] min-w-[450px]">
                   <thead>
                     <tr className="bg-navy text-white text-[9px] uppercase tracking-wide">
                       <th className="w-8 text-center py-1.5 px-1.5">#</th>
@@ -489,7 +494,7 @@ export default function BLEditor() {
             </section>
 
             {/* Observations */}
-            <section className="bg-white border border-bdr rounded-[10px] p-4">
+            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Observations / Reserves du client</SectionTitle>
               <textarea
                 value={doc.observations}
@@ -502,7 +507,7 @@ export default function BLEditor() {
           </div>
 
           {/* Preview panel */}
-          <div className="sticky top-[70px]">
+          <div className="lg:sticky lg:top-[70px]">
             <div className="text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-1.5">Aperçu du document</div>
             <div className="bg-white border border-bdr rounded shadow-md overflow-hidden">
               {renderCopy("EXEMPLAIRE 1 — CLIENT / DESTINATAIRE")}
@@ -524,6 +529,6 @@ export default function BLEditor() {
           </div>
         )}
       </div>
-    </>
+    </AppShell>
   );
 }

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Receipt, Truck, LogOut, BarChart3, Clock, Activity, User } from "lucide-react";
-import { Card, Badge, Button, Avatar, Skeleton, EmptyState, SectionTitle } from "@/components/ui";
+import { FileText, Receipt, Truck, BarChart3, Clock, Activity } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import { Card, Badge, Skeleton, EmptyState, SectionTitle } from "@/components/ui";
 import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
 import { ROLE_PERMISSIONS, type Permission } from "@/lib/types";
 import { fmtNum } from "@/lib/utils";
@@ -41,13 +42,6 @@ interface AuditEvent {
   user?: { name: string } | null;
 }
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Bonjour";
-  if (h < 18) return "Bon après-midi";
-  return "Bonsoir";
-}
-
 export default function Home() {
   const router = useRouter();
   const [recentDocs, setRecentDocs] = useState<Doc[]>([]);
@@ -65,10 +59,7 @@ export default function Home() {
       fetch("/api/audit?limit=5").then((r) => r.ok ? r.json() : { events: [] }).catch(() => ({ events: [] })),
     ])
       .then(([me, st, docs, bl, audit]) => {
-        if (!me.user) {
-          router.push("/login");
-          return;
-        }
+        if (!me.user) { router.push("/login"); return; }
         setUser(me.user);
         setStats(st);
         const docsArr = (Array.isArray(docs) ? docs : []).map((d: Record<string, unknown>) => ({
@@ -91,190 +82,129 @@ export default function Home() {
       .catch(() => { router.push("/login"); });
   }, [router]);
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  };
-
   const userPerms: Permission[] = user ? ROLE_PERMISSIONS[user.role] || [] : [];
   const can = (p: Permission) => userPerms.includes(p);
 
   const quickActions = [
-    ...(can("proforma.create") ? [{ label: "Nouvelle Pro Forma", desc: "Créer une facture pro forma", icon: FileText, href: "/proforma", color: "bg-navy/5 text-navy" }] : []),
-    ...(can("proforma.create") ? [{ label: "Nouvelle Définitive", desc: "Créer une facture définitive", icon: Receipt, href: "/definitive", color: "bg-blue-50 text-blue-600" }] : []),
-    ...(can("delivery.create") ? [{ label: "Nouveau Bon de Livraison", desc: "Créer un bon de livraison", icon: Truck, href: "/bl", color: "bg-gold/10 text-gold" }] : []),
+    ...(can("proforma.create") ? [{ label: "Pro Forma", desc: "Facture pro forma", icon: FileText, href: "/proforma", color: "bg-navy/5 text-navy border-navy/10" }] : []),
+    ...(can("proforma.create") ? [{ label: "Définitive", desc: "Facture définitive", icon: Receipt, href: "/definitive", color: "bg-blue-50 text-blue-600 border-blue-100" }] : []),
+    ...(can("delivery.create") ? [{ label: "Bon de Livraison", desc: "Bon de livraison", icon: Truck, href: "/bl", color: "bg-gold-bg text-gold border-gold/20" }] : []),
   ];
 
-  if (loading) {
-    return (
-      <div className="no-print">
-        <header className="bg-white border-b-2 border-navy px-5 py-3">
-          <Skeleton className="h-8 w-48" />
-        </header>
-        <main className="max-w-6xl mx-auto px-5 py-6 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-[10px]" />)}
-          </div>
-          <Skeleton className="h-40 rounded-[10px]" />
-        </main>
-      </div>
-    );
-  }
-
   return (
-    <div className="no-print">
-      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-navy flex items-center justify-center">
-            <span className="text-gold-lt font-bold text-sm">KSY</span>
+    <AppShell>
+      {loading ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-6 space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 sm:h-24 rounded-xl" />)}
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-navy">KSY GLOBAL SERVICE</h1>
-            <p className="text-[10px] text-txt2">KNOWLEDGE • SERVICE • YIELD</p>
-          </div>
+          <Skeleton className="h-32 sm:h-40 rounded-xl" />
         </div>
-        <div className="flex items-center gap-4">
-          {user && (
-            <div className="flex items-center gap-2">
-              <button onClick={() => router.push("/account")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" title="Mon compte" aria-label="Mon compte">
-                <User className="w-4 h-4 text-navy" />
-              </button>
-              <Avatar name={user.name} size="sm" />
-              <div className="text-right">
-                <p className="text-xs font-semibold text-navy">{greeting()}, {user.name.split(" ")[0]}</p>
-                <p className="text-[10px] text-txt2">{user.role}</p>
+      ) : (
+        <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {[
+              { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy" },
+              { label: "Revenus (FCFA)", value: fmtNum(stats.totalRevenue), icon: BarChart3, color: "text-green-600" },
+              { label: "Ce mois", value: stats.documentsThisMonth, icon: Clock, color: "text-blue-600" },
+              { label: "Bons de livraison", value: stats.totalDeliveryNotes, icon: Truck, color: "text-gold" },
+            ].map((s) => (
+              <Card key={s.label} hover shadow className="flex items-center gap-3">
+                <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gray-50 flex items-center justify-center ${s.color} shrink-0`}>
+                  <s.icon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-xl font-bold text-navy truncate">{s.value}</p>
+                  <p className="text-[10px] sm:text-[11px] text-txt2 uppercase tracking-wide truncate">{s.label}</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Quick Actions */}
+          {quickActions.length > 0 && (
+            <div>
+              <h2 className="text-[11px] sm:text-xs font-bold text-navy uppercase tracking-wide mb-3">Créer un document</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                {quickActions.map((a) => (
+                  <button
+                    key={a.href}
+                    onClick={() => router.push(a.href)}
+                    className={`bg-white border rounded-xl p-4 sm:p-5 text-left hover:shadow-md transition-all duration-200 cursor-pointer group ${a.color}`}
+                  >
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-navy/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <a.icon className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-sm font-bold text-navy mb-0.5">{a.label}</h3>
+                    <p className="text-[11px] sm:text-xs text-txt2">{a.desc}</p>
+                  </button>
+                ))}
               </div>
             </div>
           )}
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="w-3.5 h-3.5" /> Déconnexion
-          </Button>
-        </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-5 py-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy" },
-            { label: "Revenus (FCFA)", value: fmtNum(stats.totalRevenue), icon: BarChart3, color: "text-green-600" },
-            { label: "Ce mois", value: stats.documentsThisMonth, icon: Clock, color: "text-blue-600" },
-            { label: "Bons de livraison", value: stats.totalDeliveryNotes, icon: Truck, color: "text-gold" },
-          ].map((s) => (
-            <Card key={s.label} hover shadow className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center ${s.color}`}>
-                <s.icon className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-navy">{s.value}</p>
-                <p className="text-[10px] text-txt2 uppercase tracking-wide">{s.label}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {quickActions.length > 0 && (
-          <div>
-            <h2 className="text-xs font-bold text-navy uppercase tracking-wide mb-3">Créer un document</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {quickActions.map((a) => (
-                <button
-                  key={a.href}
-                  onClick={() => router.push(a.href)}
-                  className="bg-white border border-bdr rounded-[10px] p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
-                >
-                  <div className={`w-12 h-12 rounded-xl ${a.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                    <a.icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-bold text-navy mb-1">{a.label}</h3>
-                  <p className="text-[11px] text-txt2">{a.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
-            <Card>
-              <SectionTitle>Documents récents</SectionTitle>
-              {recentDocs.length === 0 ? (
-                <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document. Créez votre premier document !" action="Créer un document" onAction={() => router.push("/proforma")} />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-bdr">
-                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
-                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
-                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
-                        <th scope="col" className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
-                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentDocs.map((d) => (
-                        <tr
-                          key={d.id}
-                          className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                          onClick={() => router.push(d.type === "BL" ? `/bl?id=${d.id}` : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
-                        >
-                          <td className="py-2 text-xs font-semibold text-navy">{d.num}</td>
-                          <td className="py-2"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
-                          <td className="py-2 text-xs text-txt2">{d.customerName || "—"}</td>
-                          <td className="py-2 text-xs text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
-                          <td className="py-2"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+          {/* Recent + Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <Card>
+                <SectionTitle>Documents récents</SectionTitle>
+                {recentDocs.length === 0 ? (
+                  <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document. Créez votre premier document !" action="Créer un document" onAction={() => router.push("/proforma")} />
+                ) : (
+                  <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
+                    <table className="w-full min-w-[500px]">
+                      <thead>
+                        <tr className="border-b border-bdr">
+                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden sm:table-cell">Client</th>
+                          <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {recentDocs.map((d) => (
+                          <tr
+                            key={d.id}
+                            className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={() => router.push(d.type === "BL" ? `/bl?id=${d.id}` : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
+                          >
+                            <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy">{d.num}</td>
+                            <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
+                            <td className="py-2.5 text-xs text-txt2 hidden sm:table-cell">{d.customerName || "—"}</td>
+                            <td className="py-2.5 text-xs sm:text-sm text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
+                            <td className="py-2.5"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            <Card>
+              <SectionTitle icon={<Activity className="w-3 h-3" />}>Activité récente</SectionTitle>
+              {activity.length === 0 ? (
+                <p className="text-xs text-txt2 text-center py-8">Aucune activité</p>
+              ) : (
+                <div className="space-y-3">
+                  {activity.map((e) => (
+                    <div key={e.id} className="flex items-start gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-navy/20 mt-1.5 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] sm:text-xs text-txt truncate">{e.action.replace(/_/g, " ").toLowerCase()}</p>
+                        <p className="text-[10px] text-txt2">{relativeTime(e.createdAt)}{e.user ? ` • ${e.user.name}` : ""}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>
           </div>
-
-          <Card>
-            <SectionTitle icon={<Activity className="w-3 h-3" />}>Activité récente</SectionTitle>
-            {activity.length === 0 ? (
-              <p className="text-xs text-txt2 text-center py-6">Aucune activité</p>
-            ) : (
-              <div className="space-y-3">
-                {activity.map((e) => (
-                  <div key={e.id} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-navy/30 mt-1.5 shrink-0" />
-                    <div>
-                      <p className="text-[11px] text-txt">{e.action.replace(/_/g, " ").toLowerCase()}</p>
-                      <p className="text-[10px] text-txt2">{relativeTime(e.createdAt)}{e.user ? ` • ${e.user.name}` : ""}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
         </div>
-
-        <div className="flex gap-2 flex-wrap">
-          {[
-            ...((user?.role === "OWNER" || user?.role === "IT_ADMIN" || user?.role === "ADMIN") ? [{ label: "Gestion de l'entreprise", href: "/gestion", highlight: true }] : []),
-            ...(can("documents.read") ? [{ label: "Tous les documents", href: "/documents" }] : []),
-            ...(can("audit.read") ? [{ label: "Journal d'audit", href: "/audit" }] : []),
-            ...(can("company.read") ? [{ label: "Paramètres", href: "/settings" }] : []),
-            { label: "Mon compte", href: "/account" },
-          ].map((l) => (
-            <button
-              key={l.href}
-              onClick={() => router.push(l.href)}
-              className={`px-3 py-1.5 text-[11px] font-semibold rounded-full transition-colors cursor-pointer ${
-                l.highlight
-                  ? "text-white bg-navy hover:bg-navy-l"
-                  : "text-navy bg-white border border-bdr hover:border-navy"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
-      </main>
-    </div>
+      )}
+    </AppShell>
   );
 }

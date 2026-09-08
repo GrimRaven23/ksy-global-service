@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, Trash2 } from "lucide-react";
-import { Card, Badge, SearchInput, Skeleton, SkeletonTable, EmptyState } from "@/components/ui";
+import { FileText, Trash2 } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import { Card, Badge, SearchInput, Skeleton, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
 import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -122,126 +123,116 @@ export default function DocumentsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="no-print">
-        <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
-          <Skeleton className="h-6 w-32" />
-        </header>
-        <main className="max-w-6xl mx-auto px-5 py-6"><SkeletonTable rows={8} /></main>
-      </div>
-    );
-  }
-
   return (
-    <div className="no-print">
-      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
-        <button onClick={() => router.push("/")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          <ArrowLeft className="w-4 h-4 text-navy" />
-        </button>
-        <h1 className="text-sm font-bold text-navy">Tous les documents</h1>
+    <AppShell>
+      <PageHeader title="Tous les documents" backHref="/">
         <Badge color="bg-navy/10 text-navy">{docs.length}</Badge>
-      </header>
+      </PageHeader>
 
-      <main className="max-w-6xl mx-auto px-5 py-6 space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par numéro ou client..." />
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <span className="text-[10px] font-semibold text-txt2 uppercase tracking-wide self-center mr-1">Type:</span>
-          {(["ALL", "PROFORMA", "DEFINITIVE", "BL"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
-                typeFilter === t ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
-              }`}
-            >
-              {t === "ALL" ? "Tous" : typeLabel(t)}
-            </button>
-          ))}
-          <span className="w-px h-5 bg-bdr mx-1 self-center" />
-          <span className="text-[10px] font-semibold text-txt2 uppercase tracking-wide self-center mr-1">Statut:</span>
-          {(["ALL", "DRAFT", "EMISE", "FINALIZED", "CONVERTED", "CANCELLED"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
-                statusFilter === s ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
-              }`}
-            >
-              {s === "ALL" ? "Tous" : statusLabel(s)}
-            </button>
-          ))}
-        </div>
+        <FilterPills
+          groups={[
+            {
+              label: "Type",
+              options: [
+                { value: "ALL", label: "Tous" },
+                { value: "PROFORMA", label: typeLabel("PROFORMA") },
+                { value: "DEFINITIVE", label: typeLabel("DEFINITIVE") },
+                { value: "BL", label: "BL" },
+              ],
+              selected: typeFilter,
+              onChange: (v) => setTypeFilter(v as typeof typeFilter),
+            },
+            {
+              label: "Statut",
+              options: [
+                { value: "ALL", label: "Tous" },
+                { value: "DRAFT", label: statusLabel("DRAFT") },
+                { value: "EMISE", label: statusLabel("EMISE") },
+                { value: "FINALIZED", label: statusLabel("FINALIZED") },
+                { value: "CONVERTED", label: statusLabel("CONVERTED") },
+                { value: "CANCELLED", label: statusLabel("CANCELLED") },
+              ],
+              selected: statusFilter,
+              onChange: (v) => setStatusFilter(v as typeof statusFilter),
+            },
+          ]}
+        />
 
-        <Card>
-          {filtered.length === 0 ? (
-            <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document trouvé." />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-bdr">
-                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
-                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
-                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Date</th>
-                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
-                    <th scope="col" className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
-                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
-                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Livraison</th>
-                    <th scope="col" className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((d) => (
-                    <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
-                      <td className="py-2 text-xs font-semibold text-navy cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
-                      <td className="py-2"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
-                      <td className="py-2 text-xs text-txt2">{relativeTime(d.createdAt)}</td>
-                      <td className="py-2 text-xs text-txt2">{d.customerName || "—"}</td>
-                      <td className="py-2 text-xs text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
-                      <td className="py-2">
-                        <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
-                        {d.convertedFrom && (
-                          <span className="text-[9px] text-purple-600 block mt-0.5">de {d.convertedFrom.num}</span>
-                        )}
-                        {d.conversions && d.conversions.length > 0 && (
-                          <span className="text-[9px] text-purple-600 block mt-0.5">→ {d.conversions[0].num}</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-[11px]">
-                        {d.deliveryNotes && d.deliveryNotes.length > 0 ? (
-                          <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy font-semibold hover:underline cursor-pointer">
-                            {d.deliveryNotes![0].num}
-                          </button>
-                        ) : d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" ? (
-                          <button onClick={() => handleCreateBL(d)} className="text-gold font-semibold hover:underline cursor-pointer text-[11px]">
-                            + Créer BL
-                          </button>
-                        ) : (
-                          <span className="text-txt2">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openDoc(d)} className="text-[11px] text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>
-                          <button onClick={() => handleDelete(d.id, d.type)} className="p-1 text-red/60 hover:text-red transition-colors cursor-pointer" aria-label="Supprimer ce document">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+        {loading ? (
+          <Card><SkeletonTable rows={8} /></Card>
+        ) : (
+          <Card>
+            {filtered.length === 0 ? (
+              <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document trouvé." />
+            ) : (
+              <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
+                <table className="w-full min-w-[600px]">
+                  <thead>
+                    <tr className="border-b border-bdr">
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden sm:table-cell">Date</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden md:table-cell">Client</th>
+                      <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden lg:table-cell">Livraison</th>
+                      <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      </main>
-    </div>
+                  </thead>
+                  <tbody>
+                    {filtered.map((d) => (
+                      <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
+                        <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
+                        <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
+                        <td className="py-2.5 text-xs text-txt2 hidden sm:table-cell">{relativeTime(d.createdAt)}</td>
+                        <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{d.customerName || "—"}</td>
+                        <td className="py-2.5 text-xs sm:text-sm text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
+                        <td className="py-2.5">
+                          <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
+                          {d.convertedFrom && (
+                            <span className="text-[9px] text-purple-600 block mt-0.5">de {d.convertedFrom.num}</span>
+                          )}
+                          {d.conversions && d.conversions.length > 0 && (
+                            <span className="text-[9px] text-purple-600 block mt-0.5">→ {d.conversions[0].num}</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-[11px] hidden lg:table-cell">
+                          {d.deliveryNotes && d.deliveryNotes.length > 0 ? (
+                            <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy font-semibold hover:underline cursor-pointer">
+                              {d.deliveryNotes![0].num}
+                            </button>
+                          ) : d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" ? (
+                            <button onClick={() => handleCreateBL(d)} className="text-gold font-semibold hover:underline cursor-pointer text-[11px]">
+                              + Créer BL
+                            </button>
+                          ) : (
+                            <span className="text-txt2">—</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => openDoc(d)} className="text-[11px] sm:text-xs text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>
+                            <button onClick={() => handleDelete(d.id, d.type)} className="p-2 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        )}
+      </div>
+    </AppShell>
   );
 }

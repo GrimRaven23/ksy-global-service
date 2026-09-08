@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Building2, Phone, Shield, Landmark, Settings } from "lucide-react";
-import { Card, SectionTitle, Field, Select, Button, Skeleton } from "@/components/ui";
+import { Save, Building2, Phone, Shield, Landmark, Settings } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import { Card, SectionTitle, Field, Select, Button, Skeleton, PageHeader } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { useDebounce } from "@/lib/hooks";
 
@@ -81,80 +82,71 @@ export default function SettingsPage() {
     toast.success("Paramètres enregistrés");
   };
 
-  if (loading) {
-    return (
-      <div className="no-print">
-        <header className="bg-white border-b-2 border-navy px-5 py-3"><Skeleton className="h-6 w-48" /></header>
-        <main className="max-w-4xl mx-auto px-5 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-[10px]" />)}
-        </main>
-      </div>
-    );
-  }
-
   return (
-    <div className="no-print">
-      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-            <ArrowLeft className="w-4 h-4 text-navy" />
-          </button>
-          <h1 className="text-sm font-bold text-navy">Paramètres de l&apos;entreprise</h1>
-          {lastSaved && <span className="text-[10px] text-txt2">Sauvegardé à {lastSaved}</span>}
-        </div>
+    <AppShell>
+      <PageHeader title="Paramètres de l'entreprise" backHref="/">
+        {lastSaved && <span className="text-[10px] sm:text-[11px] text-txt2 hidden sm:block">Sauvegardé à {lastSaved}</span>}
         <Button variant="primary" size="sm" loading={saving} onClick={handleSave}>
-          <Save className="w-3.5 h-3.5" /> Enregistrer
+          <Save className="w-4 h-4" /> <span className="hidden sm:inline">Enregistrer</span>
         </Button>
-      </header>
+      </PageHeader>
 
-      <main className="max-w-4xl mx-auto px-5 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <SectionTitle icon={<Building2 className="w-3 h-3" />}>Identité</SectionTitle>
-          <Field label="Nom" value={company.name} onChange={(v) => update("name", v)} required />
-          <Field label="Slogan" value={company.slogan} onChange={(v) => update("slogan", v)} />
-          <Field label="Activité" value={company.activite} onChange={(v) => update("activite", v)} />
-        </Card>
-
-        <Card>
-          <SectionTitle icon={<Phone className="w-3 h-3" />}>Coordonnées</SectionTitle>
-          <Field label="Adresse" value={company.address} onChange={(v) => update("address", v)} />
-          <Field label="Ville" value={company.city} onChange={(v) => update("city", v)} />
-          <Field label="Téléphone" value={company.phone} onChange={(v) => update("phone", v)} type="tel" />
-          <Field label="Téléphone 2" value={company.phone2} onChange={(v) => update("phone2", v)} type="tel" />
-          <Field label="Email" value={company.email} onChange={(v) => update("email", v)} type="email" />
-          <Field label="Site web" value={company.web} onChange={(v) => update("web", v)} placeholder="https://..." />
-        </Card>
-
-        <Card>
-          <SectionTitle icon={<Shield className="w-3 h-3" />}>Identifiants officiels</SectionTitle>
-          <Field label="RCCM" value={company.rccm} onChange={(v) => update("rccm", v)} helpText="Registre du Commerce et du Crédit Mobilier" />
-          <Field label="NINEA" value={company.ninea} onChange={(v) => update("ninea", v)} helpText="Numéro d&apos;Identification Nationale des Entreprises et Associations" />
-          <Field label="IFU" value={company.ifu} onChange={(v) => update("ifu", v)} helpText="Identifiant Fiscal Unique" />
-        </Card>
-
-        <Card>
-          <SectionTitle icon={<Landmark className="w-3 h-3" />}>Informations bancaires</SectionTitle>
-          <Field label="Banque" value={company.bank} onChange={(v) => update("bank", v)} />
-          <Field label="Titulaire" value={company.bkName} onChange={(v) => update("bkName", v)} />
-          <Field label="IBAN" value={company.iban} onChange={(v) => update("iban", v)} />
-          <Field label="SWIFT" value={company.swift} onChange={(v) => update("swift", v)} />
-          <Field label="Compte" value={company.compte} onChange={(v) => update("compte", v)} />
-        </Card>
-
-        <Card wide>
-          <SectionTitle icon={<Settings className="w-3 h-3" />}>Paramètres des documents</SectionTitle>
-          <div className="grid grid-cols-3 gap-4">
-            <Select
-              label="TVA par défaut"
-              value={company.tvaDefault}
-              onChange={(v) => update("tvaDefault", v)}
-              options={[{ value: "non", label: "Non" }, { value: "oui", label: "Oui" }]}
-            />
-            <Field label="Taux TVA (%)" value={String(company.tvaRate)} onChange={(v) => update("tvaRate", Number(v) || 0)} type="number" min="0" max="100" />
-            <Field label="Devise" value={company.currency} onChange={(v) => update("currency", v)} />
+      <div className="max-w-5xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
           </div>
-        </Card>
-      </main>
-    </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <SectionTitle icon={<Building2 className="w-3 h-3" />}>Identité</SectionTitle>
+              <Field label="Nom" value={company.name} onChange={(v) => update("name", v)} required />
+              <Field label="Slogan" value={company.slogan} onChange={(v) => update("slogan", v)} />
+              <Field label="Activité" value={company.activite} onChange={(v) => update("activite", v)} />
+            </Card>
+
+            <Card>
+              <SectionTitle icon={<Phone className="w-3 h-3" />}>Coordonnées</SectionTitle>
+              <Field label="Adresse" value={company.address} onChange={(v) => update("address", v)} />
+              <Field label="Ville" value={company.city} onChange={(v) => update("city", v)} />
+              <Field label="Téléphone" value={company.phone} onChange={(v) => update("phone", v)} type="tel" />
+              <Field label="Téléphone 2" value={company.phone2} onChange={(v) => update("phone2", v)} type="tel" />
+              <Field label="Email" value={company.email} onChange={(v) => update("email", v)} type="email" />
+              <Field label="Site web" value={company.web} onChange={(v) => update("web", v)} placeholder="https://..." />
+            </Card>
+
+            <Card>
+              <SectionTitle icon={<Shield className="w-3 h-3" />}>Identifiants officiels</SectionTitle>
+              <Field label="RCCM" value={company.rccm} onChange={(v) => update("rccm", v)} helpText="Registre du Commerce et du Crédit Mobilier" />
+              <Field label="NINEA" value={company.ninea} onChange={(v) => update("ninea", v)} helpText="Numéro d'Identification Nationale des Entreprises et Associations" />
+              <Field label="IFU" value={company.ifu} onChange={(v) => update("ifu", v)} helpText="Identifiant Fiscal Unique" />
+            </Card>
+
+            <Card>
+              <SectionTitle icon={<Landmark className="w-3 h-3" />}>Informations bancaires</SectionTitle>
+              <Field label="Banque" value={company.bank} onChange={(v) => update("bank", v)} />
+              <Field label="Titulaire" value={company.bkName} onChange={(v) => update("bkName", v)} />
+              <Field label="IBAN" value={company.iban} onChange={(v) => update("iban", v)} />
+              <Field label="SWIFT" value={company.swift} onChange={(v) => update("swift", v)} />
+              <Field label="Compte" value={company.compte} onChange={(v) => update("compte", v)} />
+            </Card>
+
+            <Card wide>
+              <SectionTitle icon={<Settings className="w-3 h-3" />}>Paramètres des documents</SectionTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Select
+                  label="TVA par défaut"
+                  value={company.tvaDefault}
+                  onChange={(v) => update("tvaDefault", v)}
+                  options={[{ value: "non", label: "Non" }, { value: "oui", label: "Oui" }]}
+                />
+                <Field label="Taux TVA (%)" value={String(company.tvaRate)} onChange={(v) => update("tvaRate", Number(v) || 0)} type="number" min="0" max="100" />
+                <Field label="Devise" value={company.currency} onChange={(v) => update("currency", v)} />
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </AppShell>
   );
 }

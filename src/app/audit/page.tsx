@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Activity, ChevronDown, ChevronRight } from "lucide-react";
-import { Card, Badge, SearchInput, Pagination, Avatar, SkeletonTable, EmptyState } from "@/components/ui";
+import { Activity, ChevronDown, ChevronRight } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import { Card, Badge, SearchInput, Pagination, Avatar, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
 import { relativeTime } from "@/lib/document-helpers";
 
 interface AuditEvent {
@@ -50,15 +51,6 @@ const actionLabels: Record<string, string> = {
   DELIVERY_NOTE_DELETED: "BL supprimé",
 };
 
-const entityTypes = [
-  { value: "", label: "Tous" },
-  { value: "auth", label: "Authentification" },
-  { value: "document", label: "Documents" },
-  { value: "delivery_note", label: "Livraisons" },
-  { value: "company", label: "Entreprise" },
-  { value: "user", label: "Utilisateurs" },
-];
-
 export default function AuditPage() {
   const router = useRouter();
   const [events, setEvents] = useState<AuditEvent[]>([]);
@@ -94,16 +86,12 @@ export default function AuditPage() {
   });
 
   return (
-    <div className="no-print">
-      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
-        <button onClick={() => router.push("/")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          <ArrowLeft className="w-4 h-4 text-navy" />
-        </button>
-        <h1 className="text-sm font-bold text-navy">Journal d&apos;audit</h1>
+    <AppShell>
+      <PageHeader title="Journal d'audit" backHref="/">
         <Badge color="bg-navy/10 text-navy">{total}</Badge>
-      </header>
+      </PageHeader>
 
-      <main className="max-w-6xl mx-auto px-5 py-6 space-y-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <SearchInput value={search} onChange={setSearch} placeholder="Rechercher une action..." />
@@ -111,11 +99,11 @@ export default function AuditPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {entityTypes.map((et) => (
+          {[{ value: "", label: "Tous" }, { value: "auth", label: "Authentification" }, { value: "document", label: "Documents" }, { value: "delivery_note", label: "Livraisons" }, { value: "company", label: "Entreprise" }, { value: "user", label: "Utilisateurs" }].map((et) => (
             <button
               key={et.value}
               onClick={() => { setEntityType(et.value); setPage(0); }}
-              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer min-h-[32px] ${
                 entityType === et.value ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
               }`}
             >
@@ -130,15 +118,15 @@ export default function AuditPage() {
           ) : filtered.length === 0 ? (
             <EmptyState icon={<Activity className="w-10 h-10" />} message="Aucun événement trouvé." />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
+              <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-bdr">
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2 w-8"></th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Date</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Action</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Entité</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Utilisateur</th>
+                    <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 w-8"></th>
+                    <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Date</th>
+                    <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Action</th>
+                    <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden sm:table-cell">Entité</th>
+                    <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden md:table-cell">Utilisateur</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,19 +137,20 @@ export default function AuditPage() {
                         className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() => setExpanded(expanded === e.id ? null : e.id)}
                       >
-                        <td className="py-2 text-txt2">
+                        <td className="py-2.5 text-txt2">
                           {expanded === e.id ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </td>
-                        <td className="py-2 text-xs text-txt2 whitespace-nowrap">{relativeTime(e.createdAt)}</td>
-                        <td className="py-2">
+                        <td className="py-2.5 text-xs text-txt2 whitespace-nowrap">{relativeTime(e.createdAt)}</td>
+                        <td className="py-2.5">
                           <Badge color={actionColors[e.action] || "bg-gray-100 text-gray-600"}>
                             {actionLabels[e.action] || e.action.replace(/_/g, " ")}
                           </Badge>
+                          <span className="text-[9px] text-txt2 block sm:hidden mt-0.5">{e.entityType}{e.entityNum ? ` • ${e.entityNum}` : ""}</span>
                         </td>
-                        <td className="py-2 text-xs text-txt2">
+                        <td className="py-2.5 text-xs text-txt2 hidden sm:table-cell">
                           {e.entityType}{e.entityNum ? ` • ${e.entityNum}` : ""}
                         </td>
-                        <td className="py-2">
+                        <td className="py-2.5 hidden md:table-cell">
                           {e.user ? (
                             <div className="flex items-center gap-1.5">
                               <Avatar name={e.user.name} size="sm" />
@@ -194,7 +183,7 @@ export default function AuditPage() {
             <Pagination page={page + 1} totalPages={totalPages} onPageChange={(p) => setPage(p - 1)} />
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

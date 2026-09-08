@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Save, Lock, Shield, Trash2, Clock, UserX, UserCheck, User } from "lucide-react";
-import { Card, Field, Button, SectionTitle, Badge, Skeleton } from "@/components/ui";
+import { Save, Lock, Shield, Trash2, Clock, UserX, UserCheck, User } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import { Card, Field, Button, SectionTitle, Badge, Skeleton, PageHeader, Select } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { roleLabel, roleColor, relativeTime } from "@/lib/document-helpers";
 
-const ALL_ROLES = ["OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"] as const;
+const ALL_ROLES = ["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "ASSISTANT", "PROJECT_MANAGER", "DELIVERY", "WAREHOUSE", "COMPLIANCE", "VIEWER"] as const;
 
 interface UserData {
   id: string;
@@ -161,145 +162,124 @@ export default function UserDetailPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="no-print">
-        <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
-          <Skeleton className="h-6 w-32" />
-        </header>
-        <main className="max-w-3xl mx-auto px-5 py-6 space-y-4">
-          <Skeleton className="h-48 rounded-[10px]" />
-          <Skeleton className="h-48 rounded-[10px]" />
-        </main>
-      </div>
-    );
-  }
-
-  if (!targetUser) return null;
-
   return (
-    <div className="no-print">
-      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
-        <button onClick={() => router.push("/users")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          <ArrowLeft className="w-4 h-4 text-navy" />
-        </button>
-        <h1 className="text-sm font-bold text-navy">Détail utilisateur</h1>
-      </header>
+    <AppShell>
+      <PageHeader title="Détail utilisateur" backHref="/users" />
 
-      <main className="max-w-3xl mx-auto px-5 py-6 space-y-5">
-        <Card>
-          <SectionTitle icon={<User className="w-3 h-3" />}>Informations</SectionTitle>
-          <div className="p-4 space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-navy flex items-center justify-center">
-                <span className="text-gold-lt font-bold text-xl">{targetUser.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</span>
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-navy">{targetUser.name}</h2>
-                <p className="text-xs text-txt2">{targetUser.email}</p>
-                <div className="flex gap-2 mt-1">
-                  <Badge color={roleColor(targetUser.role)}>{roleLabel(targetUser.role)}</Badge>
-                  <Badge color={targetUser.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
-                    {targetUser.status === "ACTIVE" ? "Actif" : "Désactivé"}
-                  </Badge>
+      <div className="max-w-3xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-5">
+        {loading ? (
+          <>
+            <Skeleton className="h-48 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+          </>
+        ) : !targetUser ? null : (
+          <>
+            <Card>
+              <SectionTitle icon={<User className="w-3 h-3" />}>Informations</SectionTitle>
+              <div className="p-4 sm:p-5 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-navy flex items-center justify-center shrink-0">
+                    <span className="text-gold-lt font-bold text-lg sm:text-xl">{targetUser.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-navy">{targetUser.name}</h2>
+                    <p className="text-xs sm:text-sm text-txt2">{targetUser.email}</p>
+                    <div className="flex gap-2 mt-1">
+                      <Badge color={roleColor(targetUser.role)}>{roleLabel(targetUser.role)}</Badge>
+                      <Badge color={targetUser.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                        {targetUser.status === "ACTIVE" ? "Actif" : "Désactivé"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-txt2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Dernière connexion : {targetUser.lastLoginAt ? relativeTime(targetUser.lastLoginAt) : "Jamais"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Membre depuis : {relativeTime(targetUser.createdAt)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-txt2">
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Dernière connexion : {targetUser.lastLoginAt ? relativeTime(targetUser.lastLoginAt) : "Jamais"}</span>
+            <Card>
+              <SectionTitle icon={<User className="w-3 h-3" />}>Modifier</SectionTitle>
+              <div className="p-4 sm:p-5 space-y-3">
+                <Field label="Nom complet" value={name} onChange={setName} />
+                <Field label="Email" type="email" value={email} onChange={setEmail} />
+                {canEditRole && (
+                  <Select label="Rôle" value={role} onChange={setRole} options={ALL_ROLES.map((r) => ({ value: r, label: roleLabel(r) }))} />
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="primary" size="sm" loading={saving} onClick={handleSave}>
+                    <Save className="w-3.5 h-3.5" /> Sauvegarder
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Shield className="w-3.5 h-3.5" />
-                <span>Membre depuis : {relativeTime(targetUser.createdAt)}</span>
-              </div>
-            </div>
-          </div>
-        </Card>
+            </Card>
 
-        <Card>
-          <SectionTitle icon={<User className="w-3 h-3" />}>Modifier</SectionTitle>
-          <div className="p-4 space-y-3">
-            <Field label="Nom complet" value={name} onChange={setName} />
-            <Field label="Email" type="email" value={email} onChange={setEmail} />
-            {canEditRole && (
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-navy">Rôle</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-bdr rounded-md text-xs bg-white"
-                >
-                  {ALL_ROLES.map((r) => (
-                    <option key={r} value={r}>{roleLabel(r)}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button variant="primary" size="sm" loading={saving} onClick={handleSave}>
-                <Save className="w-3.5 h-3.5" /> Sauvegarder
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <SectionTitle icon={<Lock className="w-3 h-3" />}>Actions</SectionTitle>
-          <div className="p-4 space-y-3">
-            {canResetPassword && !isSelf && (
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" loading={resettingPassword} onClick={handleResetPassword}>
-                  <Lock className="w-3.5 h-3.5" /> Réinitialiser le mot de passe
-                </Button>
-                {showResetPassword && tempPassword && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
-                    <p className="font-semibold text-yellow-800 mb-1">Nouveau mot de passe temporaire :</p>
-                    <code className="bg-white px-2 py-1 rounded border font-mono text-sm">{tempPassword}</code>
-                    <p className="text-yellow-700 mt-1">Communiquez ce mot de passe {"à"} l&apos;utilisateur. Il devra le changer {"à"} sa prochaine connexion.</p>
+            <Card>
+              <SectionTitle icon={<Lock className="w-3 h-3" />}>Actions</SectionTitle>
+              <div className="p-4 sm:p-5 space-y-3">
+                {canResetPassword && !isSelf && (
+                  <div className="flex flex-col sm:flex-row items-start gap-3">
+                    <Button variant="outline" size="sm" loading={resettingPassword} onClick={handleResetPassword}>
+                      <Lock className="w-3.5 h-3.5" /> Réinitialiser le mot de passe
+                    </Button>
+                    {showResetPassword && tempPassword && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs flex-1">
+                        <p className="font-semibold text-yellow-800 mb-1">Nouveau mot de passe temporaire :</p>
+                        <code className="bg-white px-2 py-1 rounded border font-mono text-sm">{tempPassword}</code>
+                        <p className="text-yellow-700 mt-1">Communiquez ce mot de passe {"à"} l&apos;utilisateur. Il devra le changer {"à"} sa prochaine connexion.</p>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {!isSelf && targetUser.status === "ACTIVE" && (
-              <Button variant="danger" size="sm" onClick={handleToggleStatus}>
-                <UserX className="w-3.5 h-3.5" /> Désactiver le compte
-              </Button>
-            )}
-            {!isSelf && targetUser.status === "DISABLED" && (
-              <Button variant="primary" size="sm" onClick={handleToggleStatus}>
-                <UserCheck className="w-3.5 h-3.5" /> Réactiver le compte
-              </Button>
-            )}
-
-            {canDelete && !isSelf && (
-              <Button variant="danger" size="sm" onClick={handleDelete}>
-                <Trash2 className="w-3.5 h-3.5" /> Supprimer le compte
-              </Button>
-            )}
-          </div>
-        </Card>
-
-        {targetUser.recentAudit && targetUser.recentAudit.length > 0 && (
-          <Card>
-            <SectionTitle icon={<Clock className="w-3 h-3" />}>Activité récente</SectionTitle>
-            <div className="p-4 space-y-2">
-              {targetUser.recentAudit.map((e) => (
-                <div key={e.id} className="flex items-start gap-2 text-xs">
-                  <div className="w-1.5 h-1.5 rounded-full bg-navy/30 mt-1.5 shrink-0" />
-                  <div>
-                    <span className="font-semibold text-navy">{e.action.replace(/_/g, " ").toLowerCase()}</span>
-                    <span className="text-txt2 ml-2">{relativeTime(e.createdAt)}</span>
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {!isSelf && targetUser.status === "ACTIVE" && (
+                    <Button variant="danger" size="sm" onClick={handleToggleStatus}>
+                      <UserX className="w-3.5 h-3.5" /> Désactiver le compte
+                    </Button>
+                  )}
+                  {!isSelf && targetUser.status === "DISABLED" && (
+                    <Button variant="primary" size="sm" onClick={handleToggleStatus}>
+                      <UserCheck className="w-3.5 h-3.5" /> Réactiver le compte
+                    </Button>
+                  )}
+                  {canDelete && !isSelf && (
+                    <Button variant="danger" size="sm" onClick={handleDelete}>
+                      <Trash2 className="w-3.5 h-3.5" /> Supprimer le compte
+                    </Button>
+                  )}
                 </div>
-              ))}
-            </div>
-          </Card>
+              </div>
+            </Card>
+
+            {targetUser.recentAudit && targetUser.recentAudit.length > 0 && (
+              <Card>
+                <SectionTitle icon={<Clock className="w-3 h-3" />}>Activité récente</SectionTitle>
+                <div className="p-4 sm:p-5 space-y-2">
+                  {targetUser.recentAudit.map((e) => (
+                    <div key={e.id} className="flex items-start gap-2 text-xs">
+                      <div className="w-1.5 h-1.5 rounded-full bg-navy/30 mt-1.5 shrink-0" />
+                      <div>
+                        <span className="font-semibold text-navy">{e.action.replace(/_/g, " ").toLowerCase()}</span>
+                        <span className="text-txt2 ml-2">{relativeTime(e.createdAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

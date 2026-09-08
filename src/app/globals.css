@@ -14,9 +14,56 @@
   --font-sans: var(--font-geist), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
+/* ─── Base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   font-family: var(--font-sans);
-  line-height: 1.45;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Minimum touch target size */
+button, a, input, select, textarea {
+  min-height: 44px;
+}
+
+/* Don't enforce min-height on small inline elements */
+button.badge-pill, button.filter-pill, a.badge-pill {
+  min-height: auto;
+}
+
+/* Focus visible for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--color-navy);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default focus ring for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Safe area padding for mobile notch devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
 
 /* Print templates — hidden on screen */
@@ -202,8 +249,6 @@ body {
   .print-doc.print-active { display: block !important; }
   .print-doc.print-active + .print-doc.print-active { page-break-before: always; }
   .print-doc .doc-page { width: 210mm; height: 297mm; transform: none !important; }
-
-  /* corners in mm for print */
   .print-doc .corner-tl { width: 22mm; height: 22mm; background: repeating-linear-gradient(135deg, var(--color-gold) 0mm, var(--color-gold) 1.5mm, var(--color-navy) 1.5mm, var(--color-navy) 4mm); }
   .print-doc .corner-tr { width: 22mm; height: 22mm; background: repeating-linear-gradient(-135deg, var(--color-gold) 0mm, var(--color-gold) 1.5mm, var(--color-navy) 1.5mm, var(--color-navy) 4mm); }
   .print-doc .corner-bl { width: 16mm; height: 12mm; background: repeating-linear-gradient(-45deg, var(--color-gold) 0mm, var(--color-gold) 1.2mm, transparent 1.2mm, transparent 3.5mm); }

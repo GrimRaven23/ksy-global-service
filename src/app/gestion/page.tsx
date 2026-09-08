@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, Users, ClipboardList, Shield, BarChart3, FileText, Truck } from "lucide-react";
-import { Card, Badge, Skeleton } from "@/components/ui";
+import { Building2, Users, ClipboardList, Shield, BarChart3, FileText, Truck } from "lucide-react";
+import AppShell from "@/components/AppShell";
+import { Card, Badge, Skeleton, EmptyState, PageHeader } from "@/components/ui";
 import { roleLabel } from "@/lib/document-helpers";
 
 interface UserInfo {
@@ -117,22 +118,6 @@ export default function GestionPage() {
     }).catch(() => { router.push("/login"); });
   }, [router]);
 
-  if (loading) {
-    return (
-      <div className="no-print">
-        <header className="bg-white border-b-2 border-navy px-5 py-3"><Skeleton className="h-6 w-48" /></header>
-        <main className="max-w-6xl mx-auto px-5 py-6 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-[10px]" />)}
-          </div>
-          <Skeleton className="h-64 rounded-[10px]" />
-        </main>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
   const managementSections = [
     {
       title: "Paramètres de l'entreprise",
@@ -177,85 +162,85 @@ export default function GestionPage() {
   ];
 
   return (
-    <div className="no-print">
-      <header className="bg-white border-b-2 border-navy px-5 py-3 flex items-center gap-3">
-        <button onClick={() => router.push("/")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          <ArrowLeft className="w-4 h-4 text-navy" />
-        </button>
-        <h1 className="text-sm font-bold text-navy">Gestion de l&apos;entreprise</h1>
-        {user && (
-          <div className="ml-auto flex items-center gap-2">
-            <Shield className="w-3.5 h-3.5 text-gold" />
-            <span className="text-[11px] text-txt2">{roleLabel(user.role)}</span>
-          </div>
-        )}
-      </header>
+    <AppShell>
+      <PageHeader title="Gestion de l'entreprise" backHref="/" />
 
-      <main className="max-w-6xl mx-auto px-5 py-6 space-y-6">
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy" },
-              { label: "Utilisateurs", value: stats.totalUsers, icon: Users, color: "text-blue-600" },
-              { label: "Livraisons", value: stats.totalDeliveryNotes, icon: Truck, color: "text-orange-600" },
-              { label: "Revenus (FCFA)", value: new Intl.NumberFormat("fr-FR").format(stats.totalRevenue), icon: BarChart3, color: "text-green-600" },
-            ].map((s) => (
-              <Card key={s.label} shadow className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center ${s.color}`}>
-                  <s.icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-navy">{s.value}</p>
-                  <p className="text-[10px] text-txt2 uppercase tracking-wide">{s.label}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        <div>
-          <h2 className="text-xs font-bold text-navy uppercase tracking-wide mb-3">Accès rapide</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {managementSections.map((s) => (
-              <button
-                key={s.href}
-                onClick={() => router.push(s.href)}
-                className="bg-white border border-bdr rounded-[10px] p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
-              >
-                <div className={`w-12 h-12 rounded-xl ${s.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                  <s.icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-bold text-navy mb-1">{s.title}</h3>
-                <p className="text-[11px] text-txt2 mb-2">{s.desc}</p>
-                <p className="text-[9px] text-txt2/60 uppercase tracking-wide">{s.access}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <ClipboardList className="w-3 h-3 text-navy" />
-            <h2 className="text-[10px] font-bold uppercase tracking-wide text-navy">Activité récente</h2>
-          </div>
-          {recentAudit.length === 0 ? (
-            <p className="text-xs text-txt2 text-center py-6">Aucune activité récente</p>
-          ) : (
-            <div className="space-y-2">
-              {recentAudit.map((e) => (
-                <div key={e.id} className="flex items-center gap-3 py-1.5 border-b border-bdr/50 last:border-0">
-                  <Badge color={auditActionColor(e.action)}>{auditActionLabel(e.action)}</Badge>
-                  <span className="text-[10px] text-txt2 flex-1 truncate">
-                    {e.entityType}
-                    {e.user ? ` • ${e.user.name}` : ""}
-                  </span>
-                  <span className="text-[10px] text-txt2 whitespace-nowrap">{relativeTime(e.createdAt)}</span>
-                </div>
-              ))}
+      <div className="max-w-6xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-5">
+        {loading ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
             </div>
-          )}
-        </Card>
-      </main>
-    </div>
+            <Skeleton className="h-64 rounded-xl" />
+          </>
+        ) : (
+          <>
+            {stats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                {[
+                  { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy" },
+                  { label: "Utilisateurs", value: stats.totalUsers, icon: Users, color: "text-blue-600" },
+                  { label: "Livraisons", value: stats.totalDeliveryNotes, icon: Truck, color: "text-orange-600" },
+                  { label: "Revenus", value: `${new Intl.NumberFormat("fr-FR").format(stats.totalRevenue)} FCFA`, icon: BarChart3, color: "text-green-600" },
+                ].map((s) => (
+                  <Card key={s.label} shadow className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center ${s.color}`}>
+                      <s.icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm sm:text-lg font-bold text-navy truncate">{s.value}</p>
+                      <p className="text-[9px] sm:text-[10px] text-txt2 uppercase tracking-wide">{s.label}</p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <h2 className="text-[10px] sm:text-xs font-bold text-navy uppercase tracking-wide mb-3">Accès rapide</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {managementSections.map((s) => (
+                  <button
+                    key={s.href}
+                    onClick={() => router.push(s.href)}
+                    className="bg-white border border-bdr rounded-xl p-4 sm:p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
+                  >
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${s.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                      <s.icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold text-navy mb-1">{s.title}</h3>
+                    <p className="text-[10px] sm:text-[11px] text-txt2 mb-2">{s.desc}</p>
+                    <p className="text-[9px] text-txt2/60 uppercase tracking-wide">{s.access}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Card>
+              <div className="flex items-center gap-2 mb-3">
+                <ClipboardList className="w-3 h-3 text-navy" />
+                <h2 className="text-[10px] font-bold uppercase tracking-wide text-navy">Activité récente</h2>
+              </div>
+              {recentAudit.length === 0 ? (
+                <EmptyState icon={<ClipboardList className="w-8 h-8" />} message="Aucune activité récente" />
+              ) : (
+                <div className="space-y-2">
+                  {recentAudit.map((e) => (
+                    <div key={e.id} className="flex items-center gap-2 sm:gap-3 py-1.5 border-b border-bdr/50 last:border-0">
+                      <Badge color={auditActionColor(e.action)}>{auditActionLabel(e.action)}</Badge>
+                      <span className="text-[9px] sm:text-[10px] text-txt2 flex-1 truncate">
+                        {e.entityType}
+                        {e.user ? ` • ${e.user.name}` : ""}
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-txt2 whitespace-nowrap">{relativeTime(e.createdAt)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </>
+        )}
+      </div>
+    </AppShell>
   );
 }

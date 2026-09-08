@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
     const user = await requireAuth().catch(() => null);
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+    if (!hasPermission(user.role, "documents.read")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);

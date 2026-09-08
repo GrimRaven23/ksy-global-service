@@ -4,13 +4,30 @@ import { companySettingsSchema } from "@/lib/validation";
 import { getCompany, updateCompany } from "@/lib/services/company";
 import { createAuditEvent } from "@/lib/services/audit";
 
+const SENSITIVE_FIELDS = ["bank", "bkName", "iban", "swift", "compte", "rccm", "ninea", "ifu"];
+
+function stripSensitive(data: Record<string, unknown>) {
+  const stripped = { ...data };
+  for (const field of SENSITIVE_FIELDS) {
+    if (field in stripped) {
+      stripped[field] = "********";
+    }
+  }
+  return stripped;
+}
+
 export async function GET() {
   try {
     const user = await requireAuth().catch(() => null);
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+    if (!hasPermission(user.role, "company.read")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
     const company = await getCompany();
-    return NextResponse.json(company);
+    const hasSensitive = hasPermission(user.role, "company.read_sensitive");
+    return NextResponse.json(hasSensitive ? company : stripSensitive(company as Record<string, unknown>));
   } catch (error) {
     console.error("GET /api/settings error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

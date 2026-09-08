@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { requireAuth, hasPermission, canManageRole } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { userCreateSchema, userUpdateSchema } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
 
+    const targetRole = parsed.data.role || "SALES";
+    if (!canManageRole(user.role, targetRole)) {
+      return NextResponse.json(
+        { error: "Vous ne pouvez pas créer un compte avec ce niveau d'accès" },
+        { status: 403 }
+      );
+    }
+
     const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
     if (existing) {
       return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
         email: parsed.data.email,
         name: parsed.data.name,
         passwordHash: hashPassword(parsed.data.password),
-        role: parsed.data.role,
+        role: targetRole,
       },
       select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
     });
@@ -90,13 +98,32 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
 
+    if (parsed.data.role) {
+      const targetUser = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+      if (!targetUser) {
+        return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+      }
+      if (!canManageRole(user.role, parsed.data.role)) {
+        return NextResponse.json(
+          { error: "Vous ne pouvez pas attribuer ce niveau d'accès" },
+          { status: 403 }
+        );
+      }
+      if (targetUser.role === "OWNER" && user.role !== "OWNER") {
+        return NextResponse.json(
+          { error: "Seul le propriétaire peut modifier un autre propriétaire" },
+          { status: 403 }
+        );
+      }
+    }
+
     const updated = await prisma.user.update({
       where: { id },
       data: parsed.data,
       select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
     });
 
-    const action = parsed.data.role ? "ROLE_CHANGED" : "USER_DISABLED";
+    const action = parsed.data.status === "DISABLED" ? "USER_DISABLED" : parsed.data.role ? "ROLE_CHANGED" : "USER_DISABLED";
     await createAuditEvent({
       action,
       entityType: "user",

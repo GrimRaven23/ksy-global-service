@@ -192,6 +192,7 @@ export type Permission =
   | "customers.update"
   | "customers.delete"
   | "company.read"
+  | "company.read_sensitive"
   | "company.update"
   | "delivery.read"
   | "delivery.create"
@@ -207,11 +208,21 @@ export type Permission =
   | "security.manage"
   | "system.manage";
 
+export const ROLE_HIERARCHY: Record<string, number> = {
+  OWNER: 100,
+  IT_ADMIN: 90,
+  ADMIN: 80,
+  SALES: 60,
+  ASSISTANT: 50,
+  DELIVERY: 40,
+  VIEWER: 10,
+};
+
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   OWNER: [
     "documents.read", "documents.create", "documents.update", "documents.finalize", "documents.delete", "documents.print",
     "customers.read", "customers.create", "customers.update", "customers.delete",
-    "company.read", "company.update",
+    "company.read", "company.read_sensitive", "company.update",
     "delivery.read", "delivery.create", "delivery.update", "delivery.delete", "delivery.print",
     "users.read", "users.create", "users.update", "users.disable",
     "roles.manage",
@@ -220,10 +231,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "system.manage",
   ],
   IT_ADMIN: [
-    "documents.read", "documents.print",
-    "customers.read",
-    "company.read", "company.update",
-    "delivery.read", "delivery.print",
+    "company.read", "company.read_sensitive",
     "users.read", "users.create", "users.update", "users.disable",
     "audit.read",
     "security.manage",

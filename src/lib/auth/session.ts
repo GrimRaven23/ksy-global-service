@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { SessionUser, Permission } from "@/lib/types";
-import { ROLE_PERMISSIONS } from "@/lib/types";
+import { ROLE_PERMISSIONS, ROLE_HIERARCHY } from "@/lib/types";
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
 const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours
@@ -64,7 +64,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!token) return null;
   const payload = verifySessionToken(token, SESSION_SECRET);
   if (!payload) return null;
-  const user = await prisma.user.findUnique({ where: { id: payload.sub as string } });
+  const user = await prisma.user.findUnique({
+    where: { id: payload.sub as string },
+    select: { id: true, email: true, name: true, role: true, status: true },
+  });
   if (!user || user.status !== "ACTIVE") return null;
   return { id: user.id, email: user.email, name: user.name, role: user.role };
 }
@@ -78,4 +81,10 @@ export async function requireAuth(): Promise<SessionUser> {
 export function hasPermission(userRole: string, permission: string): boolean {
   const perms = ROLE_PERMISSIONS[userRole] || [];
   return perms.includes(permission as Permission);
+}
+
+export function canManageRole(actorRole: string, targetRole: string): boolean {
+  const actorLevel = ROLE_HIERARCHY[actorRole] ?? 0;
+  const targetLevel = ROLE_HIERARCHY[targetRole] ?? 0;
+  return actorLevel > targetLevel;
 }

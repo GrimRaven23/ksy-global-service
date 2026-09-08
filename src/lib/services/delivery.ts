@@ -53,8 +53,9 @@ export async function createDeliveryNote(data: {
         driverName: data.driverName || null,
         driverPhone: data.driverPhone || null,
         orderRef: data.orderRef || null,
-        customerId: data.customerId || null,
-        documentId: data.documentId || null,
+        customer: data.customerId ? { connect: { id: data.customerId } } : undefined,
+        document: data.documentId ? { connect: { id: data.documentId } } : undefined,
+        company: { connect: { id: "company_main" } },
         ...companySnap,
         ...customerSnap,
         createdBy: data.userId || null,
@@ -96,7 +97,11 @@ export async function updateDeliveryNote(id: string, data: Record<string, unknow
     if (data.driverPhone !== undefined) updateData.driverPhone = data.driverPhone as string;
     if (data.orderRef !== undefined) updateData.orderRef = data.orderRef as string;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.customerId !== undefined) updateData.customerId = data.customerId as string | null;
+    if (data.customerId !== undefined) {
+      updateData.customer = data.customerId
+        ? { connect: { id: data.customerId as string } }
+        : { disconnect: true };
+    }
 
     if (data.items && Array.isArray(data.items)) {
       await tx.deliveryNoteItem.deleteMany({ where: { deliveryNoteId: id } });

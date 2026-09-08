@@ -13,14 +13,18 @@ export function typeColor(t: string): string {
 
 export function statusLabel(s: string): string {
   if (s === "DRAFT") return "Brouillon";
+  if (s === "EMISE") return "Émise";
   if (s === "FINALIZED") return "Finalisé";
+  if (s === "CONVERTED") return "Convertie";
   if (s === "CANCELLED") return "Annulé";
   return s;
 }
 
 export function statusColor(s: string): string {
   if (s === "DRAFT") return "bg-gray-100 text-gray-600";
+  if (s === "EMISE") return "bg-blue-100 text-blue-700";
   if (s === "FINALIZED") return "bg-green-100 text-green-700";
+  if (s === "CONVERTED") return "bg-purple-100 text-purple-700";
   if (s === "CANCELLED") return "bg-red-100 text-red-600";
   return "bg-gray-100 text-gray-600";
 }
@@ -30,9 +34,13 @@ export function roleLabel(r: string): string {
     OWNER: "Propriétaire",
     IT_ADMIN: "Admin IT",
     ADMIN: "Administrateur",
+    ACCOUNTANT: "Comptable",
     SALES: "Vente",
     ASSISTANT: "Assistant",
+    PROJECT_MANAGER: "Chef de Projet",
     DELIVERY: "Livreur",
+    WAREHOUSE: "Magasinier",
+    COMPLIANCE: "Conformité",
     VIEWER: "Lecteur",
   };
   return labels[r] || r;
@@ -43,9 +51,13 @@ export function roleColor(r: string): string {
     OWNER: "bg-gold/20 text-navy",
     IT_ADMIN: "bg-purple-100 text-purple-700",
     ADMIN: "bg-blue-100 text-blue-700",
+    ACCOUNTANT: "bg-emerald-100 text-emerald-700",
     SALES: "bg-green-100 text-green-700",
+    PROJECT_MANAGER: "bg-cyan-100 text-cyan-700",
     ASSISTANT: "bg-teal-100 text-teal-700",
+    COMPLIANCE: "bg-indigo-100 text-indigo-700",
     DELIVERY: "bg-orange-100 text-orange-700",
+    WAREHOUSE: "bg-amber-100 text-amber-700",
     VIEWER: "bg-gray-100 text-gray-600",
   };
   return colors[r] || "bg-gray-100 text-gray-600";

@@ -133,7 +133,7 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {user && (
             <div className="flex items-center gap-2">
-              <button onClick={() => router.push("/account")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" title="Mon compte">
+              <button onClick={() => router.push("/account")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" title="Mon compte" aria-label="Mon compte">
                 <User className="w-4 h-4 text-navy" />
               </button>
               <Avatar name={user.name} size="sm" />
@@ -199,11 +199,11 @@ export default function Home() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-bdr">
-                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
-                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
-                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
-                        <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
-                        <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
+                        <th scope="col" className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                        <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -77,6 +77,13 @@ export async function PUT(
       }
     }
 
+    if (status === "DISABLED" && target.role === "OWNER") {
+      const activeOwners = await prisma.user.count({ where: { role: "OWNER", status: "ACTIVE" } });
+      if (activeOwners <= 1) {
+        return NextResponse.json({ error: "Impossible de désactiver le dernier propriétaire actif" }, { status: 400 });
+      }
+    }
+
     if (email && email !== target.email) {
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) {
@@ -137,6 +144,13 @@ export async function DELETE(
     const target = await prisma.user.findUnique({ where: { id }, select: { role: true, email: true } });
     if (!target) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    }
+
+    if (target.role === "OWNER") {
+      const activeOwners = await prisma.user.count({ where: { role: "OWNER", status: "ACTIVE" } });
+      if (activeOwners <= 1) {
+        return NextResponse.json({ error: "Impossible de supprimer le dernier propriétaire actif" }, { status: 400 });
+      }
     }
 
     await prisma.user.delete({ where: { id } });

@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { convertDocumentSchema } from "@/lib/validation";
+import { convertProformaToDefinitive } from "@/lib/services/documents";
+import { createAuditEvent } from "@/lib/services/audit";
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await requireAuth().catch(() => null);
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!hasPermission(user.role, "proforma.convert")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const parsed = convertDocumentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const definitive = await convertProformaToDefinitive(parsed.data.documentId, {
+      saleMode: parsed.data.saleMode,
+      userId: user.id,
+    });
+
+    await createAuditEvent({
+      action: "DOCUMENT_CONVERTED",
+      entityType: "document",
+      entityId: definitive.id,
+      entityNum: definitive.num,
+      userId: user.id,
+      details: {
+        sourceDocumentId: parsed.data.documentId,
+        sourceType: "PROFORMA",
+        targetType: "DEFINITIVE",
+        saleMode: definitive.saleMode,
+      },
+    });
+
+    return NextResponse.json(definitive, { status: 201 });
+  } catch (error: unknown) {
+    console.error("POST /api/documents/convert error:", error);
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}

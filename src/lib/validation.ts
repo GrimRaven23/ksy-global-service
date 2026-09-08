@@ -87,7 +87,7 @@ export const documentUpdateSchema = z.object({
   validity: z.string().nullable().optional(),
   ref: z.string().max(100).nullable().optional(),
   saleMode: z.enum(["DIRECTE", "LIVRAISON"]).optional(),
-  status: z.enum(["DRAFT", "FINALIZED", "CANCELLED"]).optional(),
+  status: z.enum(["DRAFT", "EMISE", "FINALIZED", "CONVERTED", "CANCELLED"]).optional(),
   tvaOn: z.boolean().optional(),
   tvaRate: z.number().min(0).max(100).optional(),
   customerId: z.string().nullable().optional(),
@@ -123,7 +123,7 @@ export const deliveryUpdateSchema = z.object({
   driverName: z.string().max(200).optional(),
   driverPhone: z.string().max(30).optional(),
   orderRef: z.string().max(100).optional(),
-  status: z.enum(["DRAFT", "FINALIZED", "CANCELLED"]).optional(),
+  status: z.enum(["DRAFT", "EMISE", "FINALIZED", "CONVERTED", "CANCELLED"]).optional(),
   customerId: z.string().nullable().optional(),
   customerName: z.string().max(200).optional(),
   customerAddr: z.string().max(500).optional(),
@@ -145,13 +145,13 @@ export const userCreateSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(200),
   password: z.string().min(8).max(200),
-  role: z.enum(["OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"]),
+  role: z.enum(["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "ASSISTANT", "PROJECT_MANAGER", "DELIVERY", "WAREHOUSE", "COMPLIANCE", "VIEWER"]),
 });
 
 export const userUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   email: z.string().email().optional(),
-  role: z.enum(["OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"]).optional(),
+  role: z.enum(["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "ASSISTANT", "PROJECT_MANAGER", "DELIVERY", "WAREHOUSE", "COMPLIANCE", "VIEWER"]).optional(),
   status: z.enum(["ACTIVE", "DISABLED"]).optional(),
 });
 
@@ -187,4 +187,13 @@ export const profileUpdateSchema = z.object({
 
 export const adminResetPasswordSchema = z.object({
   userId: z.string().min(1),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENT CONVERSION (PF → DF)
+// ═══════════════════════════════════════════════════════════════
+
+export const convertDocumentSchema = z.object({
+  documentId: z.string().min(1),
+  saleMode: z.enum(["DIRECTE", "LIVRAISON"]).optional(),
 });

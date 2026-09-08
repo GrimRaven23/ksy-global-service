@@ -20,6 +20,8 @@ interface Doc {
   createdAt: string;
   deliveryNotes?: { id: string; num: string }[];
   saleMode?: string;
+  convertedFrom?: { id: string; num: string; type: string } | null;
+  conversions?: { id: string; num: string; type: string }[];
 }
 
 export default function DocumentsPage() {
@@ -30,7 +32,7 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"ALL" | "PROFORMA" | "DEFINITIVE" | "BL">("ALL");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "DRAFT" | "FINALIZED" | "CANCELLED">("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "DRAFT" | "EMISE" | "FINALIZED" | "CONVERTED" | "CANCELLED">("ALL");
 
   useEffect(() => {
     Promise.all([
@@ -47,6 +49,8 @@ export default function DocumentsPage() {
           customerName: String(d.customerName || ""),
           deliveryNotes: Array.isArray(d.deliveryNotes) ? d.deliveryNotes as { id: string; num: string }[] : [],
           saleMode: String(d.saleMode || "DIRECTE"),
+          convertedFrom: d.convertedFrom || null,
+          conversions: Array.isArray(d.conversions) ? d.conversions as { id: string; num: string; type: string }[] : [],
         }));
         const dfDocs = (Array.isArray(df) ? df : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "DEFINITIVE", date: String(d.date),
@@ -54,6 +58,8 @@ export default function DocumentsPage() {
           customerName: String(d.customerName || ""),
           deliveryNotes: Array.isArray(d.deliveryNotes) ? d.deliveryNotes as { id: string; num: string }[] : [],
           saleMode: String(d.saleMode || "DIRECTE"),
+          convertedFrom: d.convertedFrom || null,
+          conversions: Array.isArray(d.conversions) ? d.conversions as { id: string; num: string; type: string }[] : [],
         }));
         const blDocs = (Array.isArray(bl) ? bl : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
@@ -159,7 +165,7 @@ export default function DocumentsPage() {
           ))}
           <span className="w-px h-5 bg-bdr mx-1 self-center" />
           <span className="text-[10px] font-semibold text-txt2 uppercase tracking-wide self-center mr-1">Statut:</span>
-          {(["ALL", "DRAFT", "FINALIZED", "CANCELLED"] as const).map((s) => (
+          {(["ALL", "DRAFT", "EMISE", "FINALIZED", "CONVERTED", "CANCELLED"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -180,14 +186,14 @@ export default function DocumentsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-bdr">
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Date</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
-                    <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
-                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Livraison</th>
-                    <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
+                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Date</th>
+                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
+                    <th scope="col" className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                    <th scope="col" className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Livraison</th>
+                    <th scope="col" className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -198,7 +204,15 @@ export default function DocumentsPage() {
                       <td className="py-2 text-xs text-txt2">{relativeTime(d.createdAt)}</td>
                       <td className="py-2 text-xs text-txt2">{d.customerName || "—"}</td>
                       <td className="py-2 text-xs text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
-                      <td className="py-2"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+                      <td className="py-2">
+                        <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
+                        {d.convertedFrom && (
+                          <span className="text-[9px] text-purple-600 block mt-0.5">de {d.convertedFrom.num}</span>
+                        )}
+                        {d.conversions && d.conversions.length > 0 && (
+                          <span className="text-[9px] text-purple-600 block mt-0.5">→ {d.conversions[0].num}</span>
+                        )}
+                      </td>
                       <td className="py-2 text-[11px]">
                         {d.deliveryNotes && d.deliveryNotes.length > 0 ? (
                           <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy font-semibold hover:underline cursor-pointer">
@@ -215,7 +229,7 @@ export default function DocumentsPage() {
                       <td className="py-2 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => openDoc(d)} className="text-[11px] text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>
-                          <button onClick={() => handleDelete(d.id, d.type)} className="p-1 text-red/60 hover:text-red transition-colors cursor-pointer">
+                          <button onClick={() => handleDelete(d.id, d.type)} className="p-1 text-red/60 hover:text-red transition-colors cursor-pointer" aria-label="Supprimer ce document">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>

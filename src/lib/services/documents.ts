@@ -164,6 +164,8 @@ export async function getDocument(id: string) {
       items: { orderBy: { sortOrder: "asc" } },
       customer: true,
       deliveryNotes: { select: { id: true, num: true, status: true } },
+      convertedFrom: { select: { id: true, num: true, type: true } },
+      conversions: { select: { id: true, num: true, type: true } },
     },
   });
 }
@@ -177,6 +179,8 @@ export async function listDocuments(type?: string) {
       items: true,
       customer: true,
       deliveryNotes: { select: { id: true, num: true } },
+      convertedFrom: { select: { id: true, num: true, type: true } },
+      conversions: { select: { id: true, num: true, type: true } },
     },
     take: 100,
   });
@@ -192,4 +196,87 @@ export async function deleteDocument(id: string) {
     throw new Error("Cannot delete document with linked delivery notes. Delete the delivery notes first.");
   }
   return prisma.document.delete({ where: { id } });
+}
+
+export async function convertProformaToDefinitive(
+  proformaId: string,
+  options?: { saleMode?: "DIRECTE" | "LIVRAISON"; userId?: string }
+) {
+  const source = await prisma.document.findUnique({
+    where: { id: proformaId },
+    include: { items: true, conversions: { select: { id: true } } },
+  });
+  if (!source) throw new Error("Document source introuvable");
+  if (source.type !== "PROFORMA") throw new Error("Seules les factures pro forma peuvent être converties");
+  if (source.conversions.length > 0) {
+    throw new Error("Cette facture pro forma a déjà été convertie en facture définitive");
+  }
+
+  const company = await prisma.companySettings.findUnique({ where: { id: "company_main" } });
+  if (!company) throw new Error("Company settings not found");
+
+  const companySnap = snapshotCompany(company);
+  const customerSnap = {
+    customerName: source.customerName,
+    customerAddr: source.customerAddr,
+    customerPhone: source.customerPhone,
+    customerEmail: source.customerEmail,
+  };
+
+  const computedItems = source.items.map((item) => ({
+    designation: item.designation,
+    quantity: Number(item.quantity),
+    unitPrice: Number(item.unitPrice),
+    total: Math.round(Number(item.quantity) * Number(item.unitPrice) * 100) / 100,
+    sortOrder: item.sortOrder,
+  }));
+
+  const subtotal = computedItems.reduce((s, i) => s + i.total, 0);
+  const tvaOn = source.tvaOn;
+  const tvaRate = Number(source.tvaRate);
+  const tvaAmount = tvaOn ? Math.round(subtotal * tvaRate) / 100 : 0;
+  const total = subtotal + tvaAmount;
+
+  return prisma.$transaction(async (tx) => {
+    const num = await getNextNumber(tx, "DEFINITIVE");
+
+    const definitive = await tx.document.create({
+      data: {
+        type: "DEFINITIVE",
+        num,
+        date: new Date(),
+        validity: null,
+        ref: source.ref,
+        saleMode: options?.saleMode || source.saleMode,
+        status: "DRAFT",
+        tvaOn,
+        tvaRate,
+        subtotal,
+        tvaAmount,
+        total,
+        customerId: source.customerId,
+        ...companySnap,
+        ...customerSnap,
+        createdBy: options?.userId || null,
+        convertedFromId: source.id,
+        items: {
+          create: computedItems.map((item) => ({
+            designation: item.designation,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            sortOrder: item.sortOrder,
+          })),
+        },
+      },
+      include: { items: true, customer: true },
+    });
+
+    await tx.document.update({
+      where: { id: source.id },
+      data: { status: "CONVERTED" },
+    });
+
+    return definitive;
+  });
 }

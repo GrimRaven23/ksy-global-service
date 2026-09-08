@@ -5,7 +5,7 @@
 export type DocType = "PROFORMA" | "DEFINITIVE";
 export type DeliveryType = "DELIVERY_NOTE";
 export type SaleMode = "DIRECTE" | "LIVRAISON";
-export type DocStatus = "DRAFT" | "FINALIZED" | "CANCELLED";
+export type DocStatus = "DRAFT" | "EMISE" | "FINALIZED" | "CONVERTED" | "CANCELLED";
 
 // ═══════════════════════════════════════════════════════════════
 // COMPANY
@@ -185,8 +185,11 @@ export type Permission =
   | "documents.create"
   | "documents.update"
   | "documents.finalize"
+  | "documents.cancel"
   | "documents.delete"
   | "documents.print"
+  | "proforma.create"
+  | "proforma.convert"
   | "customers.read"
   | "customers.create"
   | "customers.update"
@@ -197,6 +200,7 @@ export type Permission =
   | "delivery.read"
   | "delivery.create"
   | "delivery.update"
+  | "delivery.confirm"
   | "delivery.delete"
   | "delivery.print"
   | "users.read"
@@ -206,29 +210,39 @@ export type Permission =
   | "roles.manage"
   | "audit.read"
   | "security.manage"
-  | "system.manage";
+  | "system.manage"
+  | "reports.view"
+  | "inventory.read"
+  | "inventory.update";
 
 export const ROLE_HIERARCHY: Record<string, number> = {
   OWNER: 100,
   IT_ADMIN: 90,
   ADMIN: 80,
+  ACCOUNTANT: 75,
   SALES: 60,
+  PROJECT_MANAGER: 55,
   ASSISTANT: 50,
+  COMPLIANCE: 45,
   DELIVERY: 40,
+  WAREHOUSE: 35,
   VIEWER: 10,
 };
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   OWNER: [
-    "documents.read", "documents.create", "documents.update", "documents.finalize", "documents.delete", "documents.print",
+    "documents.read", "documents.create", "documents.update", "documents.finalize", "documents.cancel", "documents.delete", "documents.print",
+    "proforma.create", "proforma.convert",
     "customers.read", "customers.create", "customers.update", "customers.delete",
     "company.read", "company.read_sensitive", "company.update",
-    "delivery.read", "delivery.create", "delivery.update", "delivery.delete", "delivery.print",
+    "delivery.read", "delivery.create", "delivery.update", "delivery.confirm", "delivery.delete", "delivery.print",
     "users.read", "users.create", "users.update", "users.disable",
     "roles.manage",
     "audit.read",
     "security.manage",
     "system.manage",
+    "reports.view",
+    "inventory.read", "inventory.update",
   ],
   IT_ADMIN: [
     "company.read", "company.read_sensitive",
@@ -238,27 +252,61 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "system.manage",
   ],
   ADMIN: [
-    "documents.read", "documents.create", "documents.update", "documents.finalize", "documents.print",
+    "documents.read", "documents.create", "documents.update", "documents.finalize", "documents.cancel", "documents.print",
+    "proforma.create", "proforma.convert",
     "customers.read", "customers.create", "customers.update",
     "company.read",
-    "delivery.read", "delivery.create", "delivery.update", "delivery.print",
+    "delivery.read", "delivery.create", "delivery.update", "delivery.confirm", "delivery.print",
     "users.read",
     "audit.read",
+    "reports.view",
+    "inventory.read",
+  ],
+  ACCOUNTANT: [
+    "documents.read", "documents.print",
+    "proforma.create",
+    "customers.read",
+    "company.read", "company.read_sensitive",
+    "delivery.read",
+    "reports.view",
   ],
   SALES: [
     "documents.read", "documents.create", "documents.update", "documents.print",
+    "proforma.create", "proforma.convert",
     "customers.read", "customers.create", "customers.update",
     "delivery.read", "delivery.print",
   ],
+  PROJECT_MANAGER: [
+    "documents.read", "documents.print",
+    "customers.read",
+    "delivery.read", "delivery.create", "delivery.update", "delivery.confirm", "delivery.print",
+    "reports.view",
+    "inventory.read",
+  ],
   ASSISTANT: [
     "documents.read", "documents.create", "documents.update",
+    "proforma.create",
     "customers.read", "customers.create", "customers.update",
     "delivery.read",
+  ],
+  COMPLIANCE: [
+    "documents.read",
+    "customers.read",
+    "delivery.read",
+    "audit.read",
+    "reports.view",
   ],
   DELIVERY: [
     "documents.read",
     "customers.read",
-    "delivery.read", "delivery.update", "delivery.print",
+    "delivery.read", "delivery.update", "delivery.confirm", "delivery.print",
+    "inventory.read",
+  ],
+  WAREHOUSE: [
+    "documents.read",
+    "customers.read",
+    "delivery.read",
+    "inventory.read", "inventory.update",
   ],
   VIEWER: [
     "documents.read",

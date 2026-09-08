@@ -99,11 +99,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    if (parsed.data.role) {
-      const targetUser = await prisma.user.findUnique({ where: { id }, select: { role: true } });
-      if (!targetUser) {
-        return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    const targetUser = await prisma.user.findUnique({ where: { id }, select: { role: true, status: true } });
+    if (!targetUser) {
+      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    }
+
+    if (parsed.data.status === "DISABLED" && targetUser.role === "OWNER") {
+      const activeOwners = await prisma.user.count({ where: { role: "OWNER", status: "ACTIVE" } });
+      if (activeOwners <= 1) {
+        return NextResponse.json({ error: "Impossible de désactiver le dernier propriétaire actif" }, { status: 400 });
       }
+    }
+
+    if (parsed.data.role && parsed.data.role !== targetUser.role) {
       if (!canManageRole(user.role, parsed.data.role)) {
         return NextResponse.json(
           { error: "Vous ne pouvez pas attribuer ce niveau d'accès" },

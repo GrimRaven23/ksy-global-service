@@ -512,14 +512,14 @@ export default function BLEditor() {
       </main>
 
       {/* Hidden print area — renders actual copies */}
-      <div ref={printRef} className="print-doc">
+      <div ref={printRef} className={`print-doc${printCopies > 0 ? ' print-active' : ''}`}>
         {printCopies >= 1 && (
-          <div className="print-active">
+          <div>
             {renderCopy("EXEMPLAIRE 1 — CLIENT / DESTINATAIRE")}
           </div>
         )}
         {printCopies >= 2 && (
-          <div className="print-active">
+          <div>
             {renderCopy("EXEMPLAIRE 2 — KSY GLOBAL SERVICES")}
           </div>
         )}

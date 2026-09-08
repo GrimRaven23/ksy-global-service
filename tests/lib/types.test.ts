@@ -15,7 +15,7 @@ describe("RBAC Permissions", () => {
       expect(ownerPerms).toContain("audit.read");
       expect(ownerPerms).toContain("system.manage");
       expect(ownerPerms).toContain("company.read_sensitive");
-      expect(ownerPerms.length).toBe(26);
+      expect(ownerPerms.length).toBe(33);
     });
   });
 
@@ -108,7 +108,7 @@ describe("RBAC Permissions", () => {
     });
 
     it("should have all roles in hierarchy", () => {
-      const validRoles = ["OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"];
+      const validRoles = ["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "PROJECT_MANAGER", "ASSISTANT", "COMPLIANCE", "DELIVERY", "WAREHOUSE", "VIEWER"];
       for (const role of validRoles) {
         expect(ROLE_HIERARCHY[role]).toBeDefined();
         expect(typeof ROLE_HIERARCHY[role]).toBe("number");
@@ -117,7 +117,7 @@ describe("RBAC Permissions", () => {
   });
 
   describe("All roles have valid permission arrays", () => {
-    const validRoles = ["OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"];
+    const validRoles = ["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "PROJECT_MANAGER", "ASSISTANT", "COMPLIANCE", "DELIVERY", "WAREHOUSE", "VIEWER"];
 
     it.each(validRoles)("%s role should exist and be non-empty", (role) => {
       const perms = ROLE_PERMISSIONS[role];

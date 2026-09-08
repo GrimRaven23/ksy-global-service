@@ -265,6 +265,31 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     }
   };
 
+  const handleConvertToDefinitive = async () => {
+    if (!doc.id) {
+      toast.error("Veuillez d'abord sauvegarder la facture.");
+      return;
+    }
+    const ok = await confirm("Transformer cette Pro Forma en Facture Définitive ? La Pro Forma originale sera conservée et marquée comme 'Convertie'.");
+    if (!ok) return;
+    try {
+      const res = await fetch("/api/documents/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: doc.id, saleMode: doc.saleMode.toUpperCase() }),
+      });
+      const data = await res.json();
+      if (data.id) {
+        toast.success(`Facture Définitive créée : ${data.num}`);
+        router.push(`/definitive?id=${data.id}`);
+      } else {
+        toast.error(data.error || "Erreur lors de la conversion.");
+      }
+    } catch {
+      toast.error("Erreur réseau.");
+    }
+  };
+
   const handleNew = async () => {
     const ok = await confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.");
     if (!ok) return;
@@ -319,6 +344,11 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             <button onClick={handlePrint} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
               Imprimer
             </button>
+            {isPF && doc.id && (
+              <button onClick={handleConvertToDefinitive} className="bg-gold text-navy border-none px-4 py-2 rounded-md text-xs font-bold cursor-pointer hover:bg-[#b89840]">
+                Transformer en Définitive
+              </button>
+            )}
           </div>
         </nav>
 

@@ -16,9 +16,13 @@ enum UserRole {
   OWNER
   IT_ADMIN
   ADMIN
+  ACCOUNTANT
   SALES
   ASSISTANT
+  PROJECT_MANAGER
   DELIVERY
+  WAREHOUSE
+  COMPLIANCE
   VIEWER
 }
 
@@ -118,7 +122,9 @@ enum SaleMode {
 
 enum DocumentStatus {
   DRAFT
+  EMISE
   FINALIZED
+  CONVERTED
   CANCELLED
 }
 
@@ -169,6 +175,12 @@ model Document {
   deliveryNotes DeliveryNote[]
 
   createdBy     String?        @map("created_by")
+
+  // Conversion tracking: PF → DF
+  convertedFromId String?     @map("converted_from_id")
+  convertedFrom   Document?   @relation("DocumentConversion", fields: [convertedFromId], references: [id])
+  conversions     Document[]  @relation("DocumentConversion")
+
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
@@ -176,6 +188,10 @@ model Document {
   @@index([status])
   @@index([date])
   @@index([num])
+  @@index([customerId])
+  @@index([companyId])
+  @@index([createdBy])
+  @@index([convertedFromId])
   @@map("documents")
 }
 
@@ -241,6 +257,9 @@ model DeliveryNote {
 
   @@index([date])
   @@index([num])
+  @@index([customerId])
+  @@index([documentId])
+  @@index([createdBy])
   @@map("delivery_notes")
 }
 
@@ -287,6 +306,7 @@ enum AuditAction {
   DOCUMENT_FINALIZED
   DOCUMENT_CANCELLED
   DOCUMENT_DELETED
+  DOCUMENT_CONVERTED
 
   // Delivery
   DELIVERY_NOTE_CREATED

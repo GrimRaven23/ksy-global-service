@@ -254,11 +254,18 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId: doc.id }),
       });
-      const bl = await res.json();
-      if (bl.id) {
-        router.push(`/bl?id=${bl.id}`);
+      const data = await res.json();
+      if (data.id) {
+        setDoc((prev) => ({
+          ...prev,
+          deliveryNotes: [...(prev.deliveryNotes || []), { id: data.id, num: data.num }],
+        }));
+        toast.success("Bon de livraison créé");
+      } else if (res.status === 409 && data.existingBlId) {
+        toast.warning("Un BL existe déjà pour ce document.");
+        router.push(`/bl?id=${data.existingBlId}`);
       } else {
-        toast.error("Erreur lors de la création du BL.");
+        toast.error(data.error || "Erreur lors de la création du BL.");
       }
     } catch {
       toast.error("Erreur réseau.");

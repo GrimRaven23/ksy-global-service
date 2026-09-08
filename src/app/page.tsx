@@ -247,8 +247,9 @@ export default function Home() {
           </Card>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {[
+            { label: "Gestion de l'entreprise", href: "/gestion", highlight: true },
             { label: "Tous les documents", href: "/documents" },
             { label: "Journal d'audit", href: "/audit" },
             { label: "Paramètres", href: "/settings" },
@@ -256,7 +257,11 @@ export default function Home() {
             <button
               key={l.href}
               onClick={() => router.push(l.href)}
-              className="px-3 py-1.5 text-[11px] font-semibold text-navy bg-white border border-bdr rounded-full hover:border-navy transition-colors cursor-pointer"
+              className={`px-3 py-1.5 text-[11px] font-semibold rounded-full transition-colors cursor-pointer ${
+                l.highlight
+                  ? "text-white bg-navy hover:bg-navy-l"
+                  : "text-navy bg-white border border-bdr hover:border-navy"
+              }`}
             >
               {l.label}
             </button>

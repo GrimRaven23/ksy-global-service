@@ -139,9 +139,13 @@ export default function UsersPage() {
                   { value: "OWNER", label: "Propriétaire" },
                   { value: "IT_ADMIN", label: "Admin IT" },
                   { value: "ADMIN", label: "Administrateur" },
+                  { value: "ACCOUNTANT", label: "Comptable" },
                   { value: "SALES", label: "Vente" },
                   { value: "ASSISTANT", label: "Assistant" },
+                  { value: "PROJECT_MANAGER", label: "Chef de Projet" },
                   { value: "DELIVERY", label: "Livreur" },
+                  { value: "WAREHOUSE", label: "Magasinier" },
+                  { value: "COMPLIANCE", label: "Conformité" },
                   { value: "VIEWER", label: "Lecteur" },
                 ]} />
               </div>
@@ -159,7 +163,7 @@ export default function UsersPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {["ALL", "OWNER", "IT_ADMIN", "ADMIN", "SALES", "ASSISTANT", "DELIVERY", "VIEWER"].map((r) => (
+          {["ALL", "OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "ASSISTANT", "PROJECT_MANAGER", "DELIVERY", "WAREHOUSE", "COMPLIANCE", "VIEWER"].map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}

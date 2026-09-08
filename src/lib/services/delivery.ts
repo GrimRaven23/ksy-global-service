@@ -4,6 +4,16 @@ import { snapshotCompany } from "./company";
 
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
+function deliveryCompanySnap(full: ReturnType<typeof snapshotCompany>) {
+  return {
+    companyName: full.companyName,
+    companyAddr: full.companyAddr,
+    companyCity: full.companyCity,
+    companyPhone: full.companyPhone,
+    companyRccm: full.companyRccm,
+  };
+}
+
 async function getNextBLNumber(tx: TransactionClient): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `BL-${year}-`;
@@ -34,7 +44,7 @@ export async function createDeliveryNote(data: {
   const company = await prisma.companySettings.findUnique({ where: { id: "company_main" } });
   if (!company) throw new Error("Company settings not found");
 
-  const companySnap = snapshotCompany(company);
+  const companySnap = deliveryCompanySnap(snapshotCompany(company));
   const customerSnap = {
     customerName: data.customerName || null,
     customerAddr: data.customerAddr || null,
@@ -79,7 +89,7 @@ export async function updateDeliveryNote(id: string, data: Record<string, unknow
   const company = await prisma.companySettings.findUnique({ where: { id: "company_main" } });
   if (!company) throw new Error("Company settings not found");
 
-  const companySnap = snapshotCompany(company);
+  const companySnap = deliveryCompanySnap(snapshotCompany(company));
   const customerSnap: Record<string, string | null> = {};
   if (data.customerName !== undefined) customerSnap.customerName = data.customerName as string;
   if (data.customerAddr !== undefined) customerSnap.customerAddr = data.customerAddr as string;

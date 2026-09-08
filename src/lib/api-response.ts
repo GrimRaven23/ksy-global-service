@@ -26,7 +26,7 @@ export function apiError(error: unknown) {
 }
 
 export function apiUnauthorized(message = "Non authentifié") {
-  return apiError(new Error(message)); // This will return 500, use UnauthorizedError
+  return NextResponse.json({ ok: false, error: message }, { status: 401 });
 }
 
 export function apiForbidden(message = "Accès refusé") {

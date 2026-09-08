@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { userCreateSchema, userUpdateSchema } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
+import type { AuditAction } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -123,7 +124,10 @@ export async function PUT(request: NextRequest) {
       select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
     });
 
-    const action = parsed.data.status === "DISABLED" ? "USER_DISABLED" : parsed.data.role ? "ROLE_CHANGED" : "USER_DISABLED";
+    let action: AuditAction = "USER_UPDATED";
+    if (parsed.data.status === "DISABLED") action = "USER_DISABLED";
+    else if (parsed.data.status === "ACTIVE") action = "USER_ENABLED";
+    else if (parsed.data.role) action = "ROLE_CHANGED";
     await createAuditEvent({
       action,
       entityType: "user",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Receipt, Truck, LogOut, BarChart3, Clock, Activity } from "lucide-react";
+import { FileText, Receipt, Truck, LogOut, BarChart3, Clock, Activity, User } from "lucide-react";
 import { Card, Badge, Button, Avatar, Skeleton, EmptyState, SectionTitle } from "@/components/ui";
 import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
 import { fmtNum } from "@/lib/utils";
@@ -133,6 +133,9 @@ export default function Home() {
         <div className="flex items-center gap-4">
           {user && (
             <div className="flex items-center gap-2">
+              <button onClick={() => router.push("/account")} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" title="Mon compte">
+                <User className="w-4 h-4 text-navy" />
+              </button>
               <Avatar name={user.name} size="sm" />
               <div className="text-right">
                 <p className="text-xs font-semibold text-navy">{greeting()}, {user.name.split(" ")[0]}</p>
@@ -208,7 +211,7 @@ export default function Home() {
                         <tr
                           key={d.id}
                           className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                          onClick={() => router.push(d.type === "BL" ? "/bl" : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
+                          onClick={() => router.push(d.type === "BL" ? `/bl?id=${d.id}` : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
                         >
                           <td className="py-2 text-xs font-semibold text-navy">{d.num}</td>
                           <td className="py-2"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>

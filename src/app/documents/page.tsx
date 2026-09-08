@@ -18,6 +18,8 @@ interface Doc {
   status: string;
   customerName?: string;
   createdAt: string;
+  deliveryNotes?: { id: string; num: string }[];
+  saleMode?: string;
 }
 
 export default function DocumentsPage() {
@@ -43,11 +45,15 @@ export default function DocumentsPage() {
           id: String(d.id), num: String(d.num), type: "PROFORMA", date: String(d.date),
           total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
           customerName: String(d.customerName || ""),
+          deliveryNotes: Array.isArray(d.deliveryNotes) ? d.deliveryNotes as { id: string; num: string }[] : [],
+          saleMode: String(d.saleMode || "DIRECTE"),
         }));
         const dfDocs = (Array.isArray(df) ? df : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "DEFINITIVE", date: String(d.date),
           total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
           customerName: String(d.customerName || ""),
+          deliveryNotes: Array.isArray(d.deliveryNotes) ? d.deliveryNotes as { id: string; num: string }[] : [],
+          saleMode: String(d.saleMode || "DIRECTE"),
         }));
         const blDocs = (Array.isArray(bl) ? bl : []).map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
@@ -88,8 +94,26 @@ export default function DocumentsPage() {
   };
 
   const openDoc = (d: Doc) => {
-    if (d.type === "BL") router.push("/bl");
+    if (d.type === "BL") router.push(`/bl?id=${d.id}`);
     else router.push(`/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`);
+  };
+
+  const handleCreateBL = async (doc: Doc) => {
+    const ok = await confirm(`Créer un Bon de Livraison pour ${doc.num} ?`);
+    if (!ok) return;
+    const res = await fetch("/api/documents/create-bl", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId: doc.id }),
+    });
+    if (res.ok) {
+      const bl = await res.json();
+      toast.success("Bon de livraison créé");
+      router.push(`/bl?id=${bl.id}`);
+    } else {
+      const err = await res.json();
+      toast.error(err.error || "Erreur lors de la création du BL");
+    }
   };
 
   if (loading) {
@@ -162,6 +186,7 @@ export default function DocumentsPage() {
                     <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Client</th>
                     <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
                     <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                    <th className="text-left text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Livraison</th>
                     <th className="text-right text-[10px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
                   </tr>
                 </thead>
@@ -174,6 +199,19 @@ export default function DocumentsPage() {
                       <td className="py-2 text-xs text-txt2">{d.customerName || "—"}</td>
                       <td className="py-2 text-xs text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
                       <td className="py-2"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+                      <td className="py-2 text-[11px]">
+                        {d.deliveryNotes && d.deliveryNotes.length > 0 ? (
+                          <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy font-semibold hover:underline cursor-pointer">
+                            {d.deliveryNotes![0].num}
+                          </button>
+                        ) : d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" ? (
+                          <button onClick={() => handleCreateBL(d)} className="text-gold font-semibold hover:underline cursor-pointer text-[11px]">
+                            + Créer BL
+                          </button>
+                        ) : (
+                          <span className="text-txt2">—</span>
+                        )}
+                      </td>
                       <td className="py-2 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => openDoc(d)} className="text-[11px] text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>

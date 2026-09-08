@@ -30,6 +30,7 @@ interface DocData {
   clientEmail: string;
   clientAddr: string;
   products: Product[];
+  deliveryNotes?: { id: string; num: string }[];
 }
 
 const blankProduct = (): Product => ({ designation: "", quantity: "", price: "" });
@@ -103,6 +104,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             quantity: String(item.quantity),
             price: String(item.unitPrice),
           })) || [blankProduct()],
+          deliveryNotes: existing.deliveryNotes || [],
         });
       }
       setTimeout(() => { isInitialLoad.current = false; }, 100);
@@ -478,13 +480,29 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             {!isPF && doc.saleMode === "livraison" && (
               <div className="bg-gold-bg border border-gold rounded-[10px] p-4">
                 <h3 className="text-[11px] font-bold uppercase tracking-wide text-navy mb-2">Livraison associée</h3>
-                <p className="text-[11px] text-txt2 mb-3">Ce bon de livraison accompagnera la livraison des marchandises.</p>
-                <button
-                  onClick={handleCreateBL}
-                  className="bg-gold text-navy border-none px-4 py-2 rounded-md text-xs font-bold cursor-pointer hover:bg-[#b89840]"
-                >
-                  Créer un Bon de Livraison
-                </button>
+                {doc.deliveryNotes && doc.deliveryNotes.length > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <p className="text-[11px] text-txt2">
+                      Bon de livraison <span className="font-bold text-navy">{doc.deliveryNotes[0].num}</span> créé.
+                    </p>
+                    <button
+                      onClick={() => router.push(`/bl?id=${doc.deliveryNotes![0].id}`)}
+                      className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-bold cursor-pointer hover:bg-navy-l"
+                    >
+                      Voir le Bon de Livraison
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-txt2 mb-3">Ce bon de livraison accompagnera la livraison des marchandises.</p>
+                    <button
+                      onClick={handleCreateBL}
+                      className="bg-gold text-navy border-none px-4 py-2 rounded-md text-xs font-bold cursor-pointer hover:bg-[#b89840]"
+                    >
+                      Créer un Bon de Livraison
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

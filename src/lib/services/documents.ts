@@ -160,7 +160,11 @@ export async function updateDocument(id: string, data: Record<string, unknown>) 
 export async function getDocument(id: string) {
   return prisma.document.findUnique({
     where: { id },
-    include: { items: { orderBy: { sortOrder: "asc" } }, customer: true },
+    include: {
+      items: { orderBy: { sortOrder: "asc" } },
+      customer: true,
+      deliveryNotes: { select: { id: true, num: true, status: true } },
+    },
   });
 }
 
@@ -169,7 +173,11 @@ export async function listDocuments(type?: string) {
   return prisma.document.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { items: true, customer: true },
+    include: {
+      items: true,
+      customer: true,
+      deliveryNotes: { select: { id: true, num: true } },
+    },
     take: 100,
   });
 }

@@ -162,3 +162,29 @@ export const userUpdateSchema = z.object({
 export const createBLFromDocSchema = z.object({
   documentId: z.string().min(1),
 });
+
+// ═══════════════════════════════════════════════════════════════
+// PASSWORD CHANGE
+// ═══════════════════════════════════════════════════════════════
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(8).max(200),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PROFILE UPDATE
+// ═══════════════════════════════════════════════════════════════
+
+export const profileUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  email: z.string().email().optional(),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN PASSWORD RESET
+// ═══════════════════════════════════════════════════════════════
+
+export const adminResetPasswordSchema = z.object({
+  userId: z.string().min(1),
+});

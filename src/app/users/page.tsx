@@ -186,7 +186,7 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {filtered.map((u) => (
-                  <tr key={u.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
+                  <tr key={u.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/users/${u.id}`)}>
                     <td className="py-2">
                       <div className="flex items-center gap-2">
                         <Avatar name={u.name} size="sm" />
@@ -205,7 +205,7 @@ export default function UsersPage() {
                     <td className="py-2 text-xs text-txt2">
                       {u.lastLoginAt ? relativeTime(u.lastLoginAt) : "Jamais"}
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-right" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant={u.status === "ACTIVE" ? "danger" : "secondary"}
                         size="sm"

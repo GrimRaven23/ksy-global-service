@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { createBLFromDocSchema } from "@/lib/validation";
 import { createDeliveryNote } from "@/lib/services/delivery";
-import { getDocument } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
 import { prisma } from "@/lib/prisma";
 
@@ -20,7 +19,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ID document requis" }, { status: 400 });
     }
 
-    const sourceDoc = await getDocument(parsed.data.documentId);
+    const sourceDoc = await prisma.document.findUnique({
+      where: { id: parsed.data.documentId },
+      include: { items: true },
+    });
     if (!sourceDoc) {
       return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
     }
@@ -60,6 +62,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(note, { status: 201 });
   } catch (error: unknown) {
     console.error("POST /api/documents/create-bl error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
   }
 }

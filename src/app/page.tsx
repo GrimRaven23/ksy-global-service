@@ -58,10 +58,10 @@ export default function Home() {
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/dashboard/stats").then((r) => r.json()).catch(() => ({ totalDocuments: 0, totalRevenue: 0, documentsThisMonth: 0, totalDeliveryNotes: 0 })),
-      fetch("/api/documents").then((r) => r.json()).catch(() => []),
-      fetch("/api/delivery").then((r) => r.json()).catch(() => []),
-      fetch("/api/audit?limit=5").then((r) => r.json()).catch(() => ({ events: [] })),
+      fetch("/api/dashboard/stats").then((r) => r.ok ? r.json() : { totalDocuments: 0, totalRevenue: 0, documentsThisMonth: 0, totalDeliveryNotes: 0 }).catch(() => ({ totalDocuments: 0, totalRevenue: 0, documentsThisMonth: 0, totalDeliveryNotes: 0 })),
+      fetch("/api/documents").then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch("/api/delivery").then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch("/api/audit?limit=5").then((r) => r.ok ? r.json() : { events: [] }).catch(() => ({ events: [] })),
     ])
       .then(([me, st, docs, bl, audit]) => {
         if (!me.user) {

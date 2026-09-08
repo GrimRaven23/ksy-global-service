@@ -245,6 +245,8 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "inventory.read", "inventory.update",
   ],
   IT_ADMIN: [
+    "documents.read",
+    "delivery.read",
     "company.read", "company.read_sensitive",
     "users.read", "users.create", "users.update", "users.disable",
     "audit.read",

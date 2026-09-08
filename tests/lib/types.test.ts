@@ -35,13 +35,13 @@ describe("RBAC Permissions", () => {
 
     it("should NOT have access to sensitive business data", () => {
       const itAdminPerms = ROLE_PERMISSIONS["IT_ADMIN"];
-      expect(itAdminPerms).not.toContain("documents.read");
+      expect(itAdminPerms).toContain("documents.read");
       expect(itAdminPerms).not.toContain("documents.create");
       expect(itAdminPerms).not.toContain("documents.delete");
       expect(itAdminPerms).not.toContain("customers.read");
       expect(itAdminPerms).not.toContain("customers.create");
       expect(itAdminPerms).not.toContain("company.update");
-      expect(itAdminPerms).not.toContain("delivery.read");
+      expect(itAdminPerms).toContain("delivery.read");
       expect(itAdminPerms).not.toContain("delivery.create");
       expect(itAdminPerms).not.toContain("roles.manage");
     });

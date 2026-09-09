@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { ROLE_PERMISSIONS, type Permission } from "@/lib/types";
+import { csrfFetch } from "@/lib/csrf";
 
 interface UserInfo {
   id: string;
@@ -66,7 +67,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    csrfFetch("/api/auth/me")
       .then((r) => r.json())
       .then((me) => {
         if (!me.user) {
@@ -80,7 +81,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
   }, [router]);
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await csrfFetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   };

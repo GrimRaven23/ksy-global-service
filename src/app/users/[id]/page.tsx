@@ -8,6 +8,7 @@ import { Card, Field, Button, SectionTitle, Badge, Skeleton, PageHeader, Select 
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { roleLabel, roleColor, relativeTime } from "@/lib/document-helpers";
+import { csrfFetch } from "@/lib/csrf";
 
 const ALL_ROLES = ["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "ASSISTANT", "PROJECT_MANAGER", "DELIVERY", "WAREHOUSE", "COMPLIANCE", "VIEWER"] as const;
 
@@ -46,8 +47,8 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch(`/api/users/${userId}`).then((r) => r.json()),
+      csrfFetch("/api/auth/me").then((r) => r.json()),
+      csrfFetch(`/api/users/${userId}`).then((r) => r.json()),
     ])
       .then(([me, data]) => {
         if (!me.user) { router.push("/login"); return; }
@@ -79,7 +80,7 @@ export default function UserDetailPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await csrfFetch(`/api/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, role, status }),
@@ -106,7 +107,7 @@ export default function UserDetailPage() {
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await csrfFetch(`/api/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -127,7 +128,7 @@ export default function UserDetailPage() {
   const handleResetPassword = async () => {
     setResettingPassword(true);
     try {
-      const res = await fetch(`/api/users/${userId}/reset-password`, {
+      const res = await csrfFetch(`/api/users/${userId}/reset-password`, {
         method: "POST",
       });
       if (res.ok) {
@@ -149,7 +150,7 @@ export default function UserDetailPage() {
     const ok = await confirm("Supprimer définitivement ce compte ? Cette action est irréversible.");
     if (!ok) return;
     try {
-      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      const res = await csrfFetch(`/api/users/${userId}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Compte supprimé");
         router.push("/users");

@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Company, DEFAULT_COMPANY } from "@/lib/company-defaults";
 import { Save } from "lucide-react";
+import { csrfFetch } from "@/lib/csrf";
 
 interface BLProduct {
   designation: string;
@@ -75,11 +76,11 @@ export default function BLEditor() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch("/api/settings").then((r) => {
+      csrfFetch("/api/settings").then((r) => {
         if (!r.ok) throw new Error(`Erreur ${r.status}`);
         return r.json();
       }),
-      docId ? fetch(`/api/delivery?id=${docId}`).then((r) => {
+      docId ? csrfFetch(`/api/delivery?id=${docId}`).then((r) => {
         if (!r.ok) throw new Error(`Erreur ${r.status}`);
         return r.json();
       }) : Promise.resolve(null),
@@ -170,7 +171,7 @@ export default function BLEditor() {
     const payload = buildPayload(doc);
 
     if (doc.id) {
-      const res = await fetch(`/api/delivery?id=${doc.id}`, {
+      const res = await csrfFetch(`/api/delivery?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -182,7 +183,7 @@ export default function BLEditor() {
         toast.error("Erreur lors de la sauvegarde.");
       }
     } else {
-      const res = await fetch("/api/delivery", {
+      const res = await csrfFetch("/api/delivery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -203,7 +204,7 @@ export default function BLEditor() {
     if (!documentData.id || !isDirty.current || isInitialLoad.current) return;
     const payload = buildPayload(documentData);
     try {
-      const res = await fetch(`/api/delivery?id=${documentData.id}`, {
+      const res = await csrfFetch(`/api/delivery?id=${documentData.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -232,7 +233,7 @@ export default function BLEditor() {
     if (doc.id && isDirty.current) {
       const payload = buildPayload(doc);
       try {
-        const res = await fetch(`/api/delivery?id=${doc.id}`, {
+        const res = await csrfFetch(`/api/delivery?id=${doc.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -254,7 +255,7 @@ export default function BLEditor() {
       setTimeout(() => setPrintCopies(0), 500);
     }, 50);
     if (doc.id) {
-      fetch("/api/audit/log", {
+      csrfFetch("/api/audit/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -280,7 +281,7 @@ export default function BLEditor() {
     const ok = await confirm("Confirmer ce bon de livraison ?");
     if (!ok) return;
     try {
-      const res = await fetch(`/api/delivery?id=${doc.id}`, {
+      const res = await csrfFetch(`/api/delivery?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "EMISE" }),
@@ -291,7 +292,7 @@ export default function BLEditor() {
         return;
       }
       setDoc((d) => ({ ...d, status: "EMISE" }));
-      fetch("/api/audit/log", {
+      csrfFetch("/api/audit/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "DELIVERY_NOTE_CONFIRMED", entityType: "delivery_note", entityId: doc.id, entityNum: doc.num }),

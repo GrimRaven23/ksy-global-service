@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Company, DEFAULT_COMPANY } from "@/lib/company-defaults";
 import { Save } from "lucide-react";
+import { csrfFetch } from "@/lib/csrf";
 
 interface Product {
   designation: string;
@@ -78,11 +79,11 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch("/api/settings").then((r) => {
+      csrfFetch("/api/settings").then((r) => {
         if (!r.ok) throw new Error(`Erreur ${r.status}`);
         return r.json();
       }),
-      docId ? fetch(`/api/documents?id=${docId}`).then((r) => {
+      docId ? csrfFetch(`/api/documents?id=${docId}`).then((r) => {
         if (!r.ok) throw new Error(`Erreur ${r.status}`);
         return r.json();
       }) : Promise.resolve(null),
@@ -188,7 +189,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     const payload = buildPayload(doc);
 
     if (doc.id) {
-      const res = await fetch(`/api/documents?id=${doc.id}`, {
+      const res = await csrfFetch(`/api/documents?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -200,7 +201,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
         toast.error("Erreur lors de la sauvegarde.");
       }
     } else {
-      const res = await fetch("/api/documents", {
+      const res = await csrfFetch("/api/documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -221,7 +222,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     if (doc.id && isDirty.current) {
       const payload = buildPayload(doc);
       try {
-        const res = await fetch(`/api/documents?id=${doc.id}`, {
+        const res = await csrfFetch(`/api/documents?id=${doc.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -243,7 +244,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       setTimeout(() => setPrintActive(false), 500);
     }, 50);
     if (doc.id) {
-      fetch("/api/audit/log", {
+      csrfFetch("/api/audit/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -261,7 +262,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     if (!documentData.id || !isDirty.current || isInitialLoad.current) return;
     const payload = buildPayload(documentData);
     try {
-      const res = await fetch(`/api/documents?id=${documentData.id}`, {
+      const res = await csrfFetch(`/api/documents?id=${documentData.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -292,7 +293,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       return;
     }
     try {
-      const res = await fetch("/api/documents/create-bl", {
+      const res = await csrfFetch("/api/documents/create-bl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId: doc.id }),
@@ -323,7 +324,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     const ok = await confirm("Transformer cette Pro Forma en Facture Définitive ? La Pro Forma originale sera conservée et marquée comme 'Convertie'.");
     if (!ok) return;
     try {
-      const res = await fetch("/api/documents/convert", {
+      const res = await csrfFetch("/api/documents/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId: doc.id, saleMode: doc.saleMode.toUpperCase() }),
@@ -353,7 +354,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     const ok = await confirm("Ce document sera finalisé et ne pourra plus être modifié normalement.\n\nContinuer ?");
     if (!ok) return;
     try {
-      const res = await fetch(`/api/documents?id=${doc.id}`, {
+      const res = await csrfFetch(`/api/documents?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "EMISE" }),
@@ -364,7 +365,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
         return;
       }
       setDoc((d) => ({ ...d, status: "EMISE" }));
-      fetch("/api/audit/log", {
+      csrfFetch("/api/audit/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "DOCUMENT_FINALIZED", entityType: "document", entityId: doc.id, entityNum: doc.num }),
@@ -380,7 +381,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     const ok = await confirm("Annuler ce document ?");
     if (!ok) return;
     try {
-      const res = await fetch(`/api/documents?id=${doc.id}`, {
+      const res = await csrfFetch(`/api/documents?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "CANCELLED" }),
@@ -391,7 +392,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
         return;
       }
       setDoc((d) => ({ ...d, status: "CANCELLED" }));
-      fetch("/api/audit/log", {
+      csrfFetch("/api/audit/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "DOCUMENT_CANCELLED", entityType: "document", entityId: doc.id, entityNum: doc.num }),

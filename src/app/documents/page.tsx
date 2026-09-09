@@ -8,6 +8,7 @@ import { Card, Badge, SearchInput, SkeletonTable, EmptyState, PageHeader, Filter
 import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { csrfFetch } from "@/lib/csrf";
 import { fmtNum } from "@/lib/utils";
 
 interface Doc {
@@ -37,10 +38,10 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/documents?type=PROFORMA").then((r) => r.json()),
-      fetch("/api/documents?type=DEFINITIVE").then((r) => r.json()),
-      fetch("/api/delivery").then((r) => r.json()),
+      csrfFetch("/api/auth/me").then((r) => r.json()),
+      csrfFetch("/api/documents?type=PROFORMA").then((r) => r.json()),
+      csrfFetch("/api/documents?type=DEFINITIVE").then((r) => r.json()),
+      csrfFetch("/api/delivery").then((r) => r.json()),
     ])
       .then(([me, pf, df, bl]) => {
         if (!me.user) { router.push("/login"); return; }
@@ -94,7 +95,7 @@ export default function DocumentsPage() {
     const ok = await confirm("Supprimer ce document ? Cette action est irréversible.");
     if (!ok) return;
     const endpoint = type === "BL" ? "/api/delivery" : "/api/documents";
-    const res = await fetch(`${endpoint}?id=${id}`, { method: "DELETE" });
+    const res = await csrfFetch(`${endpoint}?id=${id}`, { method: "DELETE" });
     if (res.ok) {
       setDocs((prev) => prev.filter((d) => d.id !== id));
       toast.success("Document supprimé");
@@ -111,7 +112,7 @@ export default function DocumentsPage() {
   const handleCreateBL = async (doc: Doc) => {
     const ok = await confirm(`Créer un Bon de Livraison pour ${doc.num} ?`);
     if (!ok) return;
-    const res = await fetch("/api/documents/create-bl", {
+    const res = await csrfFetch("/api/documents/create-bl", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ documentId: doc.id }),

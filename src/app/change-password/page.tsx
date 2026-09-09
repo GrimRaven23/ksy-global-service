@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
+import { csrfFetch } from "@/lib/csrf";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function ChangePasswordPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/change-password", {
+      const res = await csrfFetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),

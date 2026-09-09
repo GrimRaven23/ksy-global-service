@@ -7,6 +7,7 @@ import AppShell from "@/components/AppShell";
 import { Card, Field, Button, SectionTitle, Badge, Skeleton, PageHeader } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { roleLabel, roleColor, relativeTime } from "@/lib/document-helpers";
+import { csrfFetch } from "@/lib/csrf";
 
 interface UserInfo {
   id: string;
@@ -32,7 +33,7 @@ export default function AccountPage() {
   const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    csrfFetch("/api/auth/me")
       .then((r) => r.json())
       .then((me) => {
         if (!me.user) { router.push("/login"); return; }
@@ -48,7 +49,7 @@ export default function AccountPage() {
     if (!user) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/users/${user.id}`, {
+      const res = await csrfFetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email }),
@@ -82,7 +83,7 @@ export default function AccountPage() {
     }
     setChangingPassword(true);
     try {
-      const res = await fetch("/api/auth/change-password", {
+      const res = await csrfFetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),

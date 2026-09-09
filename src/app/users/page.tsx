@@ -8,6 +8,7 @@ import { Card, Badge, Button, Avatar, SearchInput, Field, Select, SectionTitle, 
 import { roleLabel, roleColor, relativeTime } from "@/lib/document-helpers";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { csrfFetch } from "@/lib/csrf";
 
 interface User {
   id: string;
@@ -34,8 +35,8 @@ export default function UsersPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/users").then((r) => r.json()),
+      csrfFetch("/api/auth/me").then((r) => r.json()),
+      csrfFetch("/api/users").then((r) => r.json()),
     ]).then(([me, data]) => {
       if (!me.user) { router.push("/login"); return; }
       setCurrentUser(me.user);
@@ -59,7 +60,7 @@ export default function UsersPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/users", {
+      const res = await csrfFetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -90,7 +91,7 @@ export default function UsersPage() {
     const ok = await confirm(`Voulez-vous ${action} ${user.name} ?`);
     if (!ok) return;
 
-    const res = await fetch(`/api/users?id=${user.id}`, {
+    const res = await csrfFetch(`/api/users?id=${user.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),

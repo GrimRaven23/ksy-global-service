@@ -7,6 +7,7 @@ import AppShell from "@/components/AppShell";
 import { Card, SectionTitle, Field, Select, Button, Skeleton, PageHeader } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { useDebounce } from "@/lib/hooks";
+import { csrfFetch } from "@/lib/csrf";
 
 interface Company {
   name: string; slogan: string; activite: string; address: string; city: string;
@@ -36,8 +37,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/settings").then((r) => r.json()),
+      csrfFetch("/api/auth/me").then((r) => r.json()),
+      csrfFetch("/api/settings").then((r) => r.json()),
     ]).then(([me, data]) => {
       if (!me.user) { router.push("/login"); return; }
       if (data && !data.error) setCompany({ ...DEFAULT, ...data });
@@ -48,7 +49,7 @@ export default function SettingsPage() {
 
   const save = useCallback(async (data: Company) => {
     try {
-      const res = await fetch("/api/settings", {
+      const res = await csrfFetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

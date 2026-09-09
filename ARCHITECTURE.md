@@ -40,7 +40,7 @@ KSY Global Service is a small business platform for managing invoices, delivery 
 | Database | PostgreSQL (Supabase) |
 | ORM | Prisma 6.19 |
 | Authentication | Custom HMAC-based sessions |
-| Testing | Vitest |
+| Testing | Vitest + Playwright (E2E) |
 | Deployment | Vercel |
 
 ## Frontend Architecture
@@ -81,6 +81,26 @@ KSY Global Service is a small business platform for managing invoices, delivery 
 - Debounced auto-save (1 second)
 - No global state management (appropriate for app size)
 
+### Design System
+
+The UI uses a custom design system built on Tailwind CSS with the following tokens:
+
+| Token | Color | Usage |
+|---|---|---|
+| `navy` | `#0B1D3A` | Primary brand color, headers, text |
+| `navy-l` | `#132d52` | Hover states |
+| `gold` | `#C8A84E` | Accent, CTAs, highlights |
+| `bg` | `#f4f5f7` | Page background |
+| `bdr` | `#e5e7eb` | Borders, dividers |
+| `txt` | `#1a1a2e` | Primary text |
+| `txt2` | `#6b7280` | Secondary text |
+| `txt3` | `#9ca3af` | Tertiary/muted text |
+
+Shadows: `shadow-card` (subtle), `shadow-card-hover` (elevated on hover).
+Gradients: `gradient-navy` (header), `gradient-gold` (accents).
+
+Key components: `Button` (6 variants), `Card`, `Badge`, `Field`, `Select`, `Pagination`, `Avatar`, `SearchInput`, `FilterPills`, `SectionTitle`, `EmptyState`.
+
 ## Backend Architecture
 
 ### API Routes
@@ -103,6 +123,28 @@ KSY Global Service is a small business platform for managing invoices, delivery 
 | `/api/audit` | GET | Audit log |
 | `/api/dashboard/stats` | GET | Dashboard statistics |
 | `/api/health` | GET | Health check |
+
+### Pagination
+
+List endpoints (`/api/documents`, `/api/delivery`) support server-side pagination:
+
+```
+GET /api/documents?page=1&pageSize=20&type=PROFORMA
+GET /api/delivery?page=1&pageSize=20
+```
+
+Response format:
+```json
+{
+  "items": [...],
+  "total": 42,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 3
+}
+```
+
+Default `pageSize` is 20, max is 100.
 
 ### Services
 

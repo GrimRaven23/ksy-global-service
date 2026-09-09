@@ -467,12 +467,17 @@ export default function BLEditor() {
             <span className="text-[13px] sm:text-[15px] font-bold text-navy truncate">Bon de Livraison</span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               {doc.id && (
-                <span className={`text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1 rounded hidden sm:block ${
-                  doc.status === "DRAFT" ? "bg-gray-100 text-gray-600" :
-                  doc.status === "EMISE" ? "bg-navy/10 text-navy" :
-                  doc.status === "CANCELLED" ? "bg-red-100 text-red-700" :
+                <span className={`text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1 rounded-full hidden sm:block ${
+                  doc.status === "DRAFT" ? "bg-gray-200 text-gray-700" :
+                  doc.status === "EMISE" ? "bg-green-100 text-green-800 ring-1 ring-green-200" :
+                  doc.status === "CANCELLED" ? "bg-red-100 text-red-800 ring-1 ring-red-200" :
                   "bg-gray-100 text-gray-600"
-                }`}>{doc.status}</span>
+                }`}>{
+                  doc.status === "DRAFT" ? "Brouillon" :
+                  doc.status === "EMISE" ? "Confirmé" :
+                  doc.status === "CANCELLED" ? "Annulé" :
+                  doc.status
+                }</span>
               )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
               <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
@@ -495,6 +500,16 @@ export default function BLEditor() {
             </div>
           </div>
         </nav>
+
+        {!isDraft && doc.id && (
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 pt-3 bg-green-50 border-b border-green-200">
+            <div className="flex items-center gap-2 py-2">
+              <span className="text-xs font-bold text-green-700">
+                ✓ Bon de livraison confirmé — les modifications sont désactivées
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 py-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <div className="flex flex-col gap-3.5">

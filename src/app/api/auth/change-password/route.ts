@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuth, createSession, destroySession } from "@/lib/auth/session";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -45,6 +45,15 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: newHash, mustChangePassword: false },
+    });
+
+    await destroySession();
+    await createSession({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      mustChangePassword: false,
     });
 
     await createAuditEvent({

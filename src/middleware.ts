@@ -157,6 +157,18 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (payload.mustChangePassword) {
+    const allowed = ["/change-password", "/api/auth/change-password", "/api/auth/logout"];
+    if (!allowed.some((p) => pathname.startsWith(p))) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ ok: false, error: "Changement de mot de passe requis" }, { status: 403 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/change-password";
+      return NextResponse.redirect(url);
+    }
+  }
+
   const response = NextResponse.next();
   return addSecurityHeaders(response);
 }

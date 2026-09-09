@@ -442,13 +442,19 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             </span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               {doc.id && (
-                <span className={`text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1 rounded hidden sm:block ${
-                  doc.status === "DRAFT" ? "bg-gray-100 text-gray-600" :
-                  doc.status === "EMISE" ? "bg-navy/10 text-navy" :
-                  doc.status === "CONVERTED" ? "bg-purple-100 text-purple-700" :
-                  doc.status === "CANCELLED" ? "bg-red-100 text-red-700" :
+                <span className={`text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1 rounded-full hidden sm:block ${
+                  doc.status === "DRAFT" ? "bg-gray-200 text-gray-700" :
+                  doc.status === "EMISE" ? "bg-green-100 text-green-800 ring-1 ring-green-200" :
+                  doc.status === "CONVERTED" ? "bg-purple-100 text-purple-800 ring-1 ring-purple-200" :
+                  doc.status === "CANCELLED" ? "bg-red-100 text-red-800 ring-1 ring-red-200" :
                   "bg-gray-100 text-gray-600"
-                }`}>{doc.status}</span>
+                }`}>{
+                  doc.status === "DRAFT" ? "Brouillon" :
+                  doc.status === "EMISE" ? "Finalisée" :
+                  doc.status === "CONVERTED" ? "Convertie" :
+                  doc.status === "CANCELLED" ? "Annulée" :
+                  doc.status
+                }</span>
               )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
               <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
@@ -478,6 +484,28 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             </div>
           </div>
         </nav>
+
+        {!isDraft && doc.id && (
+          <div className={`max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 pt-3 ${
+            doc.status === "EMISE" ? "bg-green-50 border-b border-green-200" :
+            doc.status === "CANCELLED" ? "bg-red-50 border-b border-red-200" :
+            doc.status === "CONVERTED" ? "bg-purple-50 border-b border-purple-200" :
+            ""
+          }`}>
+            <div className="flex items-center gap-2 py-2">
+              <span className={`text-xs font-bold ${
+                doc.status === "EMISE" ? "text-green-700" :
+                doc.status === "CANCELLED" ? "text-red-700" :
+                doc.status === "CONVERTED" ? "text-purple-700" :
+                "text-gray-700"
+              }`}>
+                {doc.status === "EMISE" && "✓ Document finalisé — les modifications sont désactivées"}
+                {doc.status === "CANCELLED" && "✗ Document annulé"}
+                {doc.status === "CONVERTED" && "→ Document converti en facture définitive"}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="max-w-[1440px] mx-auto px-5 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           {/* Editor panel */}

@@ -31,13 +31,14 @@ function verifySessionToken(token: string, secret: string): Record<string, unkno
   }
 }
 
-export async function createSession(user: { id: string; email: string; name: string; role: string }) {
+export async function createSession(user: { id: string; email: string; name: string; role: string; mustChangePassword?: boolean }) {
   const now = Math.floor(Date.now() / 1000);
   const payload = JSON.stringify({
     sub: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
+    mustChangePassword: user.mustChangePassword || false,
     iat: now,
     exp: now + SESSION_MAX_AGE,
   });

@@ -8,14 +8,23 @@ export async function checkRateLimit(
   const now = new Date();
   const resetAt = new Date(now.getTime() + windowMs);
 
-  const existing = await prisma.rateLimit.findUnique({ where: { key } });
+  let existing;
+  try {
+    existing = await prisma.rateLimit.findUnique({ where: { key } });
+  } catch {
+    return { allowed: true, remaining: maxRequests, retryAfter: 0 };
+  }
 
   if (!existing || now > existing.resetAt) {
-    await prisma.rateLimit.upsert({
-      where: { key },
-      update: { count: 1, resetAt },
-      create: { key, count: 1, resetAt },
-    });
+    try {
+      await prisma.rateLimit.upsert({
+        where: { key },
+        update: { count: 1, resetAt },
+        create: { key, count: 1, resetAt },
+      });
+    } catch {
+      return { allowed: true, remaining: maxRequests - 1, retryAfter: 0 };
+    }
     return { allowed: true, remaining: maxRequests - 1, retryAfter: 0 };
   }
 
@@ -24,10 +33,14 @@ export async function checkRateLimit(
     return { allowed: false, remaining: 0, retryAfter };
   }
 
-  await prisma.rateLimit.update({
-    where: { key },
-    data: { count: { increment: 1 } },
-  });
+  try {
+    await prisma.rateLimit.update({
+      where: { key },
+      data: { count: { increment: 1 } },
+    });
+  } catch {
+    return { allowed: true, remaining: maxRequests - existing.count - 1, retryAfter: 0 };
+  }
 
   return { allowed: true, remaining: maxRequests - existing.count - 1, retryAfter: 0 };
 }

@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, FileText, Plus, Settings, User, LogOut, Menu, X, ChevronRight,
-  ClipboardList, Users, Shield,
+  ClipboardList, Users, Shield, Sun, Moon, Monitor,
 } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { ROLE_PERMISSIONS, type Permission } from "@/lib/types";
 import { csrfFetch } from "@/lib/csrf";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface UserInfo {
   id: string;
@@ -62,6 +63,7 @@ function greeting(): string {
 export default function AppShell({ children, hideNav = false }: { children: React.ReactNode; hideNav?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -95,8 +97,8 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen bg-bg">
-        <header className="bg-white border-b border-bdr/60 h-14" />
+      <div className="min-h-screen bg-bg dark:bg-[#0f1117]">
+        <header className="bg-white dark:bg-surface border-b border-bdr/60 h-14" />
         <div className="h-16" />
       </div>
     );
@@ -107,11 +109,11 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
   const visibleAdmin = ADMIN_ITEMS.filter((item) => can(item.permission));
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen bg-bg dark:bg-[#0f1117]">
       {!hideNav && (
         <>
           {/* ── Desktop Header ── */}
-          <header className="bg-white border-b border-bdr/60 sticky top-0 z-50 hidden md:block">
+          <header className="bg-white dark:bg-surface border-b border-bdr/60 sticky top-0 z-50 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-14">
           {/* Logo */}
           <button onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer group">
@@ -133,7 +135,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   isActive(item.href)
                     ? "bg-navy text-white shadow-sm"
-                    : "text-txt2 hover:bg-gray-50 hover:text-navy"
+                    : "text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-navy"
                 }`}
               >
                 {item.label}
@@ -144,12 +146,12 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
                 <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-gold bg-gold/8 hover:bg-gold/15 transition-all cursor-pointer flex items-center gap-1">
                   <Plus className="w-3 h-3" /> Créer
                 </button>
-                <div className="absolute top-full left-0 mt-1 bg-white border border-bdr/60 rounded-xl shadow-lg py-1 min-w-[180px] hidden group-hover:block z-50">
+                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-surface border border-bdr/60 rounded-xl shadow-lg py-1 min-w-[180px] hidden group-hover:block z-50">
                   {visibleCreate.map((item) => (
                     <button
                       key={item.href}
                       onClick={() => router.push(item.href)}
-                      className="w-full text-left px-3 py-2 text-xs text-txt hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                     >
                       {item.label}
                     </button>
@@ -162,12 +164,12 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
                 <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-txt2 hover:bg-gray-50 transition-all cursor-pointer flex items-center gap-1">
                   Admin <ChevronRight className="w-3 h-3 rotate-90" />
                 </button>
-                <div className="absolute top-full left-0 mt-1 bg-white border border-bdr/60 rounded-xl shadow-lg py-1 min-w-[180px] hidden group-hover:block z-50">
+                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-surface border border-bdr/60 rounded-xl shadow-lg py-1 min-w-[180px] hidden group-hover:block z-50">
                   {visibleAdmin.map((item) => (
                     <button
                       key={item.href}
                       onClick={() => router.push(item.href)}
-                      className="w-full text-left px-3 py-2 text-xs text-txt hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="w-full text-left px-3 py-2 text-xs text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                     >
                       {item.label}
                     </button>
@@ -180,8 +182,16 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
           {/* User area */}
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg text-txt3 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-navy dark:hover:text-gold transition-colors cursor-pointer"
+              title={resolvedTheme === "dark" ? "Mode clair" : "Mode sombre"}
+              aria-label={resolvedTheme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+            >
+              {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
               onClick={() => router.push("/account")}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
               <Avatar name={user.name} size="sm" />
               <div className="text-right hidden lg:block">
@@ -202,7 +212,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
       </header>
 
       {/* ── Mobile Header ── */}
-      <header className="bg-white border-b border-bdr/60 sticky top-0 z-50 md:hidden">
+      <header className="bg-white dark:bg-surface border-b border-bdr/60 sticky top-0 z-50 md:hidden">
         <div className="px-4 flex items-center justify-between h-12">
           <button onClick={() => router.push("/")} className="flex items-center gap-2 cursor-pointer">
             <div className="w-7 h-7 rounded-lg gradient-navy flex items-center justify-center shrink-0 shadow-sm">
@@ -211,6 +221,14 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
             <span className="text-xs font-bold text-navy">KSY GLOBAL SERVICE</span>
           </button>
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+              title={resolvedTheme === "dark" ? "Mode clair" : "Mode sombre"}
+              aria-label={resolvedTheme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+            >
+              {resolvedTheme === "dark" ? <Sun className="w-4 h-4 text-gold" /> : <Moon className="w-4 h-4 text-navy" />}
+            </button>
             <button
               onClick={() => router.push("/account")}
               className="p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
@@ -230,7 +248,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
 
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
-          <div className="border-t border-bdr/60 bg-white animate-slide-up">
+          <div className="border-t border-bdr/60 bg-white dark:bg-surface animate-slide-up">
             <nav className="px-3 py-2 space-y-0.5" aria-label="Navigation mobile">
               {visibleNav.map((item) => (
                 <button
@@ -239,7 +257,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     isActive(item.href)
                       ? "bg-navy text-white"
-                      : "text-txt hover:bg-gray-50"
+                      : "text-txt hover:bg-gray-50 dark:hover:bg-white/5"
                   }`}
                 >
                   <item.icon className="w-4 h-4" />
@@ -253,7 +271,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
                     <button
                       key={item.href}
                       onClick={() => { router.push(item.href); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                     >
                       <Plus className="w-4 h-4 text-gold" />
                       {item.label}
@@ -268,7 +286,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
                     <button
                       key={item.href}
                       onClick={() => { router.push(item.href); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                     >
                       <item.icon className="w-4 h-4" />
                       {item.label}
@@ -279,7 +297,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
               <div className="pt-2 border-t border-bdr/60">
                 <button
                   onClick={() => { router.push("/account"); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   <User className="w-4 h-4" />
                   Mon compte
@@ -305,7 +323,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
       {!hideNav && (
         <>
           {/* ── Mobile bottom nav ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-bdr/60 z-50 pb-safe" aria-label="Navigation mobile">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-surface border-t border-bdr/60 z-50 pb-safe" aria-label="Navigation mobile">
         <div className="flex items-center justify-around h-14">
           <button
             onClick={() => router.push("/")}

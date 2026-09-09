@@ -3,6 +3,10 @@ import { test, expect } from "@playwright/test";
 const TEST_EMAIL = process.env.TEST_EMAIL || "admin@ksy-global.com";
 const TEST_PASSWORD = process.env.TEST_PASSWORD || "Admin@12345";
 
+function extractCsrf(cookies: Array<{ name: string; value: string }>): string {
+  return cookies.find((c) => c.name === "csrf_token")?.value || "";
+}
+
 test.describe("API - Auth", () => {
   test("POST /api/auth/login returns success with valid credentials", async ({ request }) => {
     const res = await request.post("/api/auth/login", {
@@ -77,35 +81,46 @@ test.describe("API - Customers", () => {
     expect([200, 401]).toContain(res.status());
   });
 
-  test("POST /api/customers creates customer", async ({ request }) => {
+  test("POST /api/customers creates customer", async ({ request, context }) => {
     const loginRes = await request.post("/api/auth/login", {
       data: { email: TEST_EMAIL, password: TEST_PASSWORD },
     });
     if (!loginRes.ok()) return;
+
+    const cookies = await context.cookies();
+    const csrf = extractCsrf(cookies);
+
     const res = await request.post("/api/customers", {
+      headers: { "x-csrf-token": csrf },
       data: {
         name: "E2E Test Customer",
         phone: "+221 77 000 00 00",
         email: "e2e@test.com",
       },
     });
-    if (res.status() === 403) return;
     expect([200, 201]).toContain(res.status());
     const body = await res.json();
     expect(body.ok).toBe(true);
 
     if (body.data?.id) {
-      const delRes = await request.delete(`/api/customers?id=${body.data.id}`);
+      const delRes = await request.delete(`/api/customers?id=${body.data.id}`, {
+        headers: { "x-csrf-token": csrf },
+      });
       expect(delRes.ok()).toBeTruthy();
     }
   });
 
-  test("POST /api/customers rejects empty name", async ({ request }) => {
+  test("POST /api/customers rejects empty name", async ({ request, context }) => {
     const loginRes = await request.post("/api/auth/login", {
       data: { email: TEST_EMAIL, password: TEST_PASSWORD },
     });
     if (!loginRes.ok()) return;
+
+    const cookies = await context.cookies();
+    const csrf = extractCsrf(cookies);
+
     const res = await request.post("/api/customers", {
+      headers: { "x-csrf-token": csrf },
       data: { name: "" },
     });
     expect(res.status()).not.toBe(200);

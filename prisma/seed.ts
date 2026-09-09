@@ -34,21 +34,20 @@ async function main() {
 
   // Create default owner user
   const ownerEmail = "admin@ksy-global.com";
+  const ownerPassword = process.env.OWNER_PASSWORD || "Admin@12345";
   const existingOwner = await prisma.user.findUnique({ where: { email: ownerEmail } });
   if (!existingOwner) {
-    const tempPassword = generateRandomPassword();
     await prisma.user.create({
       data: {
         email: ownerEmail,
         name: "Administrateur KSY",
-        passwordHash: hashPassword(tempPassword),
+        passwordHash: hashPassword(ownerPassword),
         role: "OWNER",
         status: "ACTIVE",
-        mustChangePassword: true,
+        mustChangePassword: false,
       },
     });
-    console.log(`✓ Default owner created (admin@ksy-global.com / ${tempPassword})`);
-    console.log("  ⚠ MUST CHANGE PASSWORD ON FIRST LOGIN");
+    console.log(`✓ Default owner created (${ownerEmail} / ${ownerPassword})`);
   } else {
     console.log("✓ Owner user already exists");
   }

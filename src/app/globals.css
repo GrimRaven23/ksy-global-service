@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-navy: #0B1D3A;
   --color-navy-l: #132d52;
@@ -32,6 +34,30 @@
   --shadow-card-hover: 0 8px 25px rgba(11,29,58,0.08), 0 4px 10px rgba(11,29,58,0.04);
 }
 
+/* ─── Dark Mode Color Overrides ──────────────────────────────── */
+html.dark {
+  --color-bg: #0f1117;
+  --color-bg-warm: #151821;
+  --color-surface: #1a1d27;
+  --color-txt: #e5e7eb;
+  --color-txt2: #9ca3af;
+  --color-txt3: #6b7280;
+  --color-bdr: #2d3340;
+  --color-bdr-light: #1f2330;
+  --color-navy: #1e3a5f;
+  --color-navy-l: #2a4f7a;
+  --color-navy-xl: #366395;
+  --color-gold: #d4b85c;
+  --color-gold-lt: #c8a84e;
+  --color-gold-bg: #1a1d0f;
+  --color-red-bg: #1f0f0f;
+  --color-green-bg: #0f1f15;
+  --color-blue-bg: #0f1520;
+  --color-purple-bg: #1a0f2a;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-card-hover: 0 8px 25px rgba(0,0,0,0.3), 0 4px 10px rgba(0,0,0,0.2);
+}
+
 /* ─── Base ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -40,11 +66,20 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   font-family: var(--font-sans);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark body {
+  background-color: #0f1117;
+  color: #e5e7eb;
 }
 
 /* Minimum touch target size */
@@ -267,6 +302,8 @@ button.badge-pill, button.filter-pill, a.badge-pill {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+html.dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
 /* ════════════════════════════════════════════════════════════════
    PRINT OVERRIDES

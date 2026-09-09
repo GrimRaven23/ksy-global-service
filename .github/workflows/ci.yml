@@ -105,19 +105,29 @@ jobs:
           DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/ksy_test"
           SESSION_SECRET: "ci-test-secret-that-is-at-least-32-characters-long"
       - name: Seed test data
-        run: npx tsx scripts/seed-ci.ts || true
+        run: npx tsx scripts/seed-ci.ts
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ksy_test"
+          DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/ksy_test"
+          TEST_EMAIL: ${{ secrets.TEST_USER_EMAIL || 'admin@ksy-global.com' }}
+          TEST_PASSWORD: ${{ secrets.TEST_USER_PASSWORD || 'Admin@12345' }}
       - name: Start Next.js server
         run: |
           npx next start -p 3000 &
-          sleep 5
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000/api/health | grep -q "healthy"; then
+              echo "Server is ready"
+              break
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
       - run: npm run test:e2e
         env:
           BASE_URL: "http://localhost:3000"
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ksy_test"
-          TEST_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-          TEST_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TEST_EMAIL: ${{ secrets.TEST_USER_EMAIL || 'admin@ksy-global.com' }}
+          TEST_PASSWORD: ${{ secrets.TEST_USER_PASSWORD || 'Admin@12345' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

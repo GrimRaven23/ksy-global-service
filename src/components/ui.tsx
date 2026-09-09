@@ -8,10 +8,10 @@ type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 const btnVariants: Record<ButtonVariant, string> = {
   primary: "bg-navy text-white hover:bg-navy-l border-transparent shadow-sm hover:shadow-md",
-  secondary: "bg-white text-txt hover:bg-gray-50 border-bdr shadow-xs hover:shadow-sm",
+  secondary: "bg-white dark:bg-surface text-txt hover:bg-gray-50 dark:hover:bg-white/5 border-bdr shadow-xs hover:shadow-sm",
   danger: "bg-red text-white hover:bg-red/90 border-transparent shadow-sm hover:shadow-md",
-  ghost: "bg-transparent text-txt2 hover:bg-gray-50 hover:text-txt border-transparent",
-  outline: "bg-white text-navy border-navy/20 hover:bg-navy/5 hover:border-navy/30",
+  ghost: "bg-transparent text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-txt border-transparent",
+  outline: "bg-white dark:bg-surface text-navy border-navy/20 hover:bg-navy/5 dark:hover:bg-navy/10 hover:border-navy/30",
   gold: "bg-gold text-navy hover:bg-gold-lt border-transparent shadow-sm hover:shadow-md",
 };
 
@@ -83,7 +83,7 @@ export function Card({
 }) {
   return (
     <section
-      className={`bg-white border border-bdr/60 rounded-xl p-4 sm:p-5 ${wide ? "md:col-span-2" : ""} ${hover ? "hover:border-navy/20 hover:shadow-card-hover transition-all duration-200" : ""} ${shadow ? "shadow-card" : ""} ${className}`}
+      className={`bg-white dark:bg-surface border border-bdr/60 rounded-xl p-4 sm:p-5 ${wide ? "md:col-span-2" : ""} ${hover ? "hover:border-navy/20 hover:shadow-card-hover transition-all duration-200" : ""} ${shadow ? "shadow-card" : ""} ${className}`}
     >
       {children}
     </section>
@@ -149,7 +149,7 @@ export function Field({
         aria-required={required || undefined}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${fieldId}-error` : helpText ? `${fieldId}-help` : undefined}
-        className={`w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none disabled:opacity-40 disabled:bg-gray-50 ${
+        className={`w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none disabled:opacity-40 disabled:bg-gray-50 dark:disabled:bg-white/5 bg-white dark:bg-surface ${
           error
             ? "border-red focus:border-red focus:ring-2 focus:ring-red/10"
             : "border-bdr focus:border-navy focus:ring-2 focus:ring-navy/10 hover:border-gray-400"
@@ -186,7 +186,7 @@ export function Select({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-40 disabled:bg-gray-50 bg-white hover:border-gray-400 cursor-pointer"
+        className="w-full px-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-40 disabled:bg-gray-50 dark:disabled:bg-white/5 bg-white dark:bg-surface hover:border-gray-400 cursor-pointer"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -198,12 +198,12 @@ export function Select({
 
 // ─── Skeleton ────────────────────────────────────────────────
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse bg-gray-100 rounded-lg ${className}`} />;
+  return <div className={`animate-pulse bg-gray-100 dark:bg-white/5 rounded-lg ${className}`} />;
 }
 
 export function SkeletonCard() {
   return (
-    <div className="bg-white border border-bdr/60 rounded-xl p-4 sm:p-5 space-y-3">
+    <div className="bg-white dark:bg-surface border border-bdr/60 rounded-xl p-4 sm:p-5 space-y-3">
       <Skeleton className="h-4 w-1/3" />
       <Skeleton className="h-3 w-2/3" />
       <Skeleton className="h-3 w-1/2" />
@@ -273,7 +273,7 @@ export function Avatar({
   };
 
   return (
-    <div className={`${sizes[size]} rounded-full bg-navy/8 text-navy font-bold flex items-center justify-center shrink-0 ring-2 ring-white ${className}`}>
+    <div className={`${sizes[size]} rounded-full bg-navy/8 text-navy font-bold flex items-center justify-center shrink-0 ring-2 ring-white dark:ring-surface ${className}`}>
       {initials}
     </div>
   );
@@ -297,7 +297,7 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-9 pr-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 bg-white hover:border-gray-400"
+        className="w-full pl-9 pr-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 bg-white dark:bg-surface hover:border-gray-400"
       />
     </div>
   );
@@ -331,7 +331,7 @@ export function Pagination({
       <button
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
-        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-400 disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -345,7 +345,7 @@ export function Pagination({
             className={`min-w-[34px] h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               p === page
                 ? "bg-navy text-white shadow-sm"
-                : "border border-bdr text-txt2 hover:bg-gray-50 hover:border-gray-400"
+                : "border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-400"
             }`}
           >
             {p}
@@ -355,7 +355,7 @@ export function Pagination({
       <button
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
-        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-400 disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
       >
         <ChevronRight className="w-4 h-4" />
       </button>
@@ -380,7 +380,7 @@ export function Toggle({
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative w-10 h-[22px] rounded-full transition-colors ${checked ? "bg-navy" : "bg-gray-300"}`}
+        className={`relative w-10 h-[22px] rounded-full transition-colors ${checked ? "bg-navy" : "bg-gray-300 dark:bg-gray-600"}`}
       >
         <span className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-[18px]" : ""}`} />
       </button>
@@ -402,7 +402,7 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white border-b border-bdr/60 sticky top-0 z-40 md:static md:z-auto">
+    <div className="bg-white dark:bg-surface border-b border-bdr/60 sticky top-0 z-40 md:static md:z-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 flex items-center justify-between h-12 md:h-14 gap-3">
         <div className="flex items-center gap-2 min-w-0">
           {(backHref || onBack) && (
@@ -442,7 +442,7 @@ export function FilterPills({
                 className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
                   group.selected === opt.value
                     ? "bg-navy text-white border-navy shadow-sm"
-                    : "bg-white text-txt2 border-bdr hover:border-gray-400 hover:text-txt"
+                    : "bg-white dark:bg-surface text-txt2 border-bdr hover:border-gray-400 hover:text-txt"
                 }`}
               >
                 {opt.label}

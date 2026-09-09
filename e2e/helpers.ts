@@ -3,6 +3,11 @@ import { type Page, type BrowserContext, expect } from "@playwright/test";
 const TEST_EMAIL = process.env.TEST_EMAIL || "admin@ksy-global.com";
 const TEST_PASSWORD = process.env.TEST_PASSWORD || "Admin@12345";
 
+function extractCsrfToken(cookies: Array<{ name: string; value: string }>): string | null {
+  const csrfCookie = cookies.find((c) => c.name === "csrf_token");
+  return csrfCookie?.value || null;
+}
+
 export async function setupTestUser(page: Page) {
   const res = await page.request.post("/api/auth/login", {
     data: { email: TEST_EMAIL, password: TEST_PASSWORD },
@@ -26,6 +31,30 @@ export async function loginViaAPI(
     data: { email, password },
   });
   return res.json();
+}
+
+export async function csrfFetch(
+  context: BrowserContext,
+  url: string,
+  options: { method?: string; data?: any } = {}
+): Promise<any> {
+  const cookies = await context.cookies();
+  const csrfToken = extractCsrfToken(cookies);
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (csrfToken) {
+    headers["x-csrf-token"] = csrfToken;
+  }
+
+  const response = await context.request.fetch(url, {
+    method: options.method || "GET",
+    headers,
+    data: options.data,
+  });
+
+  return response;
 }
 
 export async function loginAndNavigate(page: Page, path = "/") {

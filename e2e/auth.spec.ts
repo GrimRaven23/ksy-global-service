@@ -65,7 +65,7 @@ test.describe("Authentication", () => {
     await expect(pwInput).toHaveAttribute("type", "password");
   });
 
-  test("logout clears session", async ({ page }) => {
+  test("logout clears session", async ({ page, context }) => {
     await page.goto("/login");
     await page.fill("#login-email", TEST_EMAIL);
     await page.fill("#login-password", TEST_PASSWORD);
@@ -80,12 +80,17 @@ test.describe("Authentication", () => {
       await logoutBtn.click();
       await page.waitForURL("**/login", { timeout: 15_000 });
     } else {
-      await page.evaluate(() => fetch("/api/auth/logout", { method: "POST" }));
+      const cookies = await context.cookies();
+      const csrf = cookies.find((c) => c.name === "csrf_token")?.value || "";
+      await page.request.post("/api/auth/logout", {
+        headers: { "x-csrf-token": csrf },
+      });
       await page.goto("/login");
     }
     expect(page.url()).toContain("/login");
 
-    const meRes = await page.evaluate(() => fetch("/api/auth/me").then((r) => r.json()));
-    expect(meRes.user).toBeFalsy();
+    const meRes = await page.request.get("/api/auth/me");
+    const meBody = await meRes.json();
+    expect(meBody.user).toBeFalsy();
   });
 });

@@ -70,6 +70,7 @@ export default function BLEditor() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const docNum = doc.num || `BL-${curYear()}-${padN(1)}`;
+  const isDraft = doc.status === "DRAFT";
 
   useEffect(() => {
     let cancelled = false;
@@ -155,7 +156,7 @@ export default function BLEditor() {
     customerPhone: data.clientPhone || undefined,
     customerEmail: data.clientEmail || undefined,
     items: data.products
-      .filter((p) => p.designation || p.quantity)
+      .filter((p) => p.designation.trim() && p.quantity)
       .map((p, i) => ({
         designation: p.designation,
         quantity: parseFloat(p.quantity) || 0,
@@ -229,13 +230,19 @@ export default function BLEditor() {
 
   const handlePrint = useCallback(async (copies: 1 | 2) => {
     if (doc.id && isDirty.current) {
+      const payload = buildPayload(doc);
       try {
-        await fetch(`/api/delivery?id=${doc.id}`, {
+        const res = await fetch(`/api/delivery?id=${doc.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(doc),
+          body: JSON.stringify(payload),
         });
-        isDirty.current = false;
+        if (res.ok) {
+          isDirty.current = false;
+        } else {
+          toast.error("Erreur de sauvegarde avant impression.");
+          return;
+        }
       } catch {
         toast.error("Erreur de sauvegarde avant impression.");
         return;
@@ -273,11 +280,16 @@ export default function BLEditor() {
     const ok = await confirm("Confirmer ce bon de livraison ?");
     if (!ok) return;
     try {
-      await fetch(`/api/delivery?id=${doc.id}`, {
+      const res = await fetch(`/api/delivery?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "EMISE" }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erreur serveur" }));
+        toast.error(err.error || "Erreur lors de la confirmation");
+        return;
+      }
       setDoc((d) => ({ ...d, status: "EMISE" }));
       fetch("/api/audit/log", {
         method: "POST",
@@ -466,7 +478,7 @@ export default function BLEditor() {
               <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
                 Nouveau
               </button>
-              <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave}>
+              <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave} disabled={!isDraft}>
                 <Save className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Enregistrer</span>
               </Button>
               {doc.id && doc.status === "DRAFT" && (
@@ -490,12 +502,12 @@ export default function BLEditor() {
             <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Informations de livraison</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="N° du bon" value={doc.num} placeholder="BL-2026-001" onChange={(v) => updateField("num", v)} />
-                <Field label="Date de livraison" type="date" value={doc.date} onChange={(v) => updateField("date", v)} />
+                <Field label="N° du bon" value={doc.num} placeholder="BL-2026-001" onChange={(v) => updateField("num", v)} disabled={!isDraft} />
+                <Field label="Date de livraison" type="date" value={doc.date} onChange={(v) => updateField("date", v)} disabled={!isDraft} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="Référence facture associée" value={doc.ref} placeholder="FAC-2026-001" onChange={(v) => updateField("ref", v)} />
-                <Field label="Référence commande" value={doc.orderRef} placeholder="REF-2026/001" onChange={(v) => updateField("orderRef", v)} />
+                <Field label="Référence facture associée" value={doc.ref} placeholder="FAC-2026-001" onChange={(v) => updateField("ref", v)} disabled={!isDraft} />
+                <Field label="Référence commande" value={doc.orderRef} placeholder="REF-2026/001" onChange={(v) => updateField("orderRef", v)} disabled={!isDraft} />
               </div>
             </section>
 
@@ -503,8 +515,8 @@ export default function BLEditor() {
             <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Livreur</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="Nom du livreur" value={doc.driver} placeholder="Nom du livreur" onChange={(v) => updateField("driver", v)} />
-                <Field label="Téléphone" value={doc.driverPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("driverPhone", v)} />
+                <Field label="Nom du livreur" value={doc.driver} placeholder="Nom du livreur" onChange={(v) => updateField("driver", v)} disabled={!isDraft} />
+                <Field label="Téléphone" value={doc.driverPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("driverPhone", v)} disabled={!isDraft} />
               </div>
             </section>
 
@@ -512,12 +524,12 @@ export default function BLEditor() {
             <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Client / Destinataire</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} />
-                <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} />
+                <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} disabled={!isDraft} />
+                <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} disabled={!isDraft} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="Email" type="email" value={doc.clientEmail} placeholder="client@example.com" onChange={(v) => updateField("clientEmail", v)} />
-                <Field label="Adresse de livraison" value={doc.clientAddr} placeholder="Adresse complète" onChange={(v) => updateField("clientAddr", v)} />
+                <Field label="Email" type="email" value={doc.clientEmail} placeholder="client@example.com" onChange={(v) => updateField("clientEmail", v)} disabled={!isDraft} />
+                <Field label="Adresse de livraison" value={doc.clientAddr} placeholder="Adresse complète" onChange={(v) => updateField("clientAddr", v)} disabled={!isDraft} />
               </div>
             </section>
 
@@ -540,16 +552,16 @@ export default function BLEditor() {
                       <tr key={i} className="border-b border-bdr/50">
                         <td className="text-center py-1.5 px-1.5 font-semibold text-navy">{i + 1}</td>
                         <td className="py-1.5 px-1.5">
-                          <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" className="w-full px-1.5 py-1 border border-bdr rounded text-[11px]" />
+                          <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] disabled:opacity-50" />
                         </td>
                         <td className="py-1.5 px-1.5">
-                          <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right" />
+                          <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
                         </td>
                         <td className="py-1.5 px-1.5">
-                          <input type="text" value={p.observation} onChange={(e) => updateProduct(i, "observation", e.target.value)} placeholder="Observation" className="w-full px-1.5 py-1 border border-bdr rounded text-[11px]" />
+                          <input type="text" value={p.observation} onChange={(e) => updateProduct(i, "observation", e.target.value)} placeholder="Observation" disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] disabled:opacity-50" />
                         </td>
                         <td className="py-1.5 px-1.5">
-                          <button onClick={() => removeProduct(i)} className="bg-transparent border-none text-red cursor-pointer text-base p-0.5 rounded hover:bg-red/10" title="Supprimer">
+                          <button onClick={() => removeProduct(i)} disabled={!isDraft} className="bg-transparent border-none text-red cursor-pointer text-base p-0.5 rounded hover:bg-red/10 disabled:opacity-30 disabled:cursor-not-allowed" title="Supprimer">
                             &times;
                           </button>
                         </td>
@@ -558,7 +570,7 @@ export default function BLEditor() {
                   </tbody>
                 </table>
               </div>
-              <button onClick={addProduct} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors">
+              <button onClick={addProduct} disabled={!isDraft} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-navy">
                 + Ajouter un article
               </button>
             </section>
@@ -571,7 +583,8 @@ export default function BLEditor() {
                 onChange={(e) => { isDirty.current = true; updateField("observations", e.target.value); }}
                 rows={4}
                 placeholder="Ex : Articles endommagés, quantité manquante, etc."
-                className="w-full px-3 py-2.5 border border-bdr rounded text-xs resize-y min-h-[60px] focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10"
+                disabled={!isDraft}
+                className="w-full px-3 py-2.5 border border-bdr rounded text-xs resize-y min-h-[60px] focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-50"
               />
             </section>
           </div>

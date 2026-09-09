@@ -73,6 +73,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
   const isPF = type === "pf";
   const prefix = isPF ? "PF" : "FAC";
   const docNum = doc.num || `${prefix}-${curYear()}-${padN(1)}`;
+  const isDraft = doc.status === "DRAFT";
 
   useEffect(() => {
     let cancelled = false;
@@ -174,7 +175,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     customerPhone: data.clientPhone || undefined,
     customerEmail: data.clientEmail || undefined,
     items: data.products
-      .filter((p) => p.designation || p.quantity || p.price)
+      .filter((p) => p.designation.trim() && (p.quantity || p.price))
       .map((p) => ({
         designation: p.designation,
         quantity: parseFloat(p.quantity) || 0,
@@ -220,12 +221,17 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     if (doc.id && isDirty.current) {
       const payload = buildPayload(doc);
       try {
-        await fetch(`/api/documents?id=${doc.id}`, {
+        const res = await fetch(`/api/documents?id=${doc.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        isDirty.current = false;
+        if (res.ok) {
+          isDirty.current = false;
+        } else {
+          toast.error("Erreur de sauvegarde avant impression.");
+          return;
+        }
       } catch {
         toast.error("Erreur de sauvegarde avant impression.");
         return;
@@ -344,14 +350,19 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
 
   const handleFinalize = async () => {
     if (!doc.id) { toast.error("Sauvegardez d'abord."); return; }
-    const ok = await confirm("Finaliser ce document ? Il ne pourra plus être modifié.");
+    const ok = await confirm("Ce document sera finalisé et ne pourra plus être modifié normalement.\n\nContinuer ?");
     if (!ok) return;
     try {
-      await fetch(`/api/documents?id=${doc.id}`, {
+      const res = await fetch(`/api/documents?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "EMISE" }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erreur serveur" }));
+        toast.error(err.error || "Erreur lors de la finalisation");
+        return;
+      }
       setDoc((d) => ({ ...d, status: "EMISE" }));
       fetch("/api/audit/log", {
         method: "POST",
@@ -369,11 +380,16 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     const ok = await confirm("Annuler ce document ?");
     if (!ok) return;
     try {
-      await fetch(`/api/documents?id=${doc.id}`, {
+      const res = await fetch(`/api/documents?id=${doc.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "CANCELLED" }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erreur serveur" }));
+        toast.error(err.error || "Erreur lors de l'annulation");
+        return;
+      }
       setDoc((d) => ({ ...d, status: "CANCELLED" }));
       fetch("/api/audit/log", {
         method: "POST",
@@ -438,7 +454,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
               <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
                 Nouvelle
               </button>
-              <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave}>
+              <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave} disabled={!isDraft}>
                 <Save className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Enregistrer</span>
               </Button>
               <button onClick={handlePrint} className="bg-navy text-white border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy-l">
@@ -470,21 +486,22 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             <Card>
               <SectionTitle>Informations de la facture</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="N° de facture" value={doc.num} placeholder={isPF ? "PF-2026-001" : "FAC-2026-001"} onChange={(v) => updateField("num", v)} />
-                <Field label="Date d'émission" type="date" value={doc.date} onChange={(v) => updateField("date", v)} />
+                <Field label="N° de facture" value={doc.num} placeholder={isPF ? "PF-2026-001" : "FAC-2026-001"} onChange={(v) => updateField("num", v)} disabled={!isDraft} />
+                <Field label="Date d'émission" type="date" value={doc.date} onChange={(v) => updateField("date", v)} disabled={!isDraft} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {isPF && (
-                  <Field label="Date de validité" type="date" value={doc.validity} onChange={(v) => updateField("validity", v)} />
+                  <Field label="Date de validité" type="date" value={doc.validity} onChange={(v) => updateField("validity", v)} disabled={!isDraft} />
                 )}
-                <Field label="Référence commande" value={doc.ref} placeholder="REF-2026/001" onChange={(v) => updateField("ref", v)} />
+                <Field label="Référence commande" value={doc.ref} placeholder="REF-2026/001" onChange={(v) => updateField("ref", v)} disabled={!isDraft} />
                 {!isPF && (
                   <div className="mb-2 last:mb-0">
                     <label className="block text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-0.5">Mode de vente</label>
                     <select
                       value={doc.saleMode}
                       onChange={(e) => updateField("saleMode", e.target.value)}
-                      className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy"
+                      disabled={!isDraft}
+                      className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy disabled:opacity-50"
                     >
                       <option value="directe">Vente directe</option>
                       <option value="livraison">Livraison</option>
@@ -498,12 +515,12 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             <Card>
               <SectionTitle>Client</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} />
-                <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} />
+                <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} disabled={!isDraft} />
+                <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} disabled={!isDraft} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="Email" type="email" value={doc.clientEmail} placeholder="client@example.com" onChange={(v) => updateField("clientEmail", v)} />
-                <Field label="Adresse" value={doc.clientAddr} placeholder="Adresse du client" onChange={(v) => updateField("clientAddr", v)} />
+                <Field label="Email" type="email" value={doc.clientEmail} placeholder="client@example.com" onChange={(v) => updateField("clientEmail", v)} disabled={!isDraft} />
+                <Field label="Adresse" value={doc.clientAddr} placeholder="Adresse du client" onChange={(v) => updateField("clientAddr", v)} disabled={!isDraft} />
               </div>
             </Card>
 
@@ -518,6 +535,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                       type="checkbox"
                       checked={doc.tvaOn}
                       onChange={(e) => updateField("tvaOn", e.target.checked)}
+                      disabled={!isDraft}
                       className="sr-only"
                     />
                     <span className={`absolute inset-0 rounded-full transition-colors ${doc.tvaOn ? "bg-gold" : "bg-gray-400"}`} />
@@ -535,7 +553,8 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                     min={0}
                     max={100}
                     onChange={(e) => updateField("tvaRate", parseFloat(e.target.value) || 18)}
-                    className="w-16 px-2 py-1 border border-gold rounded text-xs text-center"
+                    disabled={!isDraft}
+                    className="w-16 px-2 py-1 border border-gold rounded text-xs text-center disabled:opacity-50"
                   />
                 </div>
               )}
@@ -561,13 +580,13 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                         <tr key={i} className="border-b border-bdr/50">
                           <td className="text-center py-1.5 px-1.5 font-semibold text-navy">{i + 1}</td>
                           <td className="py-1.5 px-1.5">
-                            <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" className="w-full px-1.5 py-1 border border-bdr rounded text-[11px]" />
+                            <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] disabled:opacity-50" />
                           </td>
                           <td className="py-1.5 px-1.5">
-                            <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right" />
+                            <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
                           </td>
                           <td className="py-1.5 px-1.5">
-                            <input type="number" value={p.price} min={0} onChange={(e) => updateProduct(i, "price", e.target.value)} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right" />
+                            <input type="number" value={p.price} min={0} onChange={(e) => updateProduct(i, "price", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
                           </td>
                           <td className="text-right py-1.5 px-1.5 font-semibold text-navy whitespace-nowrap">
                             {fmtNum(lineTotal)} F
@@ -575,7 +594,8 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                           <td className="py-1.5 px-1.5">
                             <button
                               onClick={() => removeProduct(i)}
-                              className="bg-transparent border-none text-red cursor-pointer text-base p-0.5 rounded hover:bg-red/10"
+                              disabled={!isDraft}
+                              className="bg-transparent border-none text-red cursor-pointer text-base p-0.5 rounded hover:bg-red/10 disabled:opacity-30 disabled:cursor-not-allowed"
                               title="Supprimer"
                             >
                               &times;
@@ -587,7 +607,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                   </tbody>
                 </table>
               </div>
-              <button onClick={addProduct} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors">
+              <button onClick={addProduct} disabled={!isDraft} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-navy">
                 + Ajouter un produit
               </button>
 

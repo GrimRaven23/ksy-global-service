@@ -3,7 +3,7 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { documentCreateSchema, documentUpdateSchema } from "@/lib/validation";
 import { createDocument, updateDocument, listDocuments, deleteDocument, getDocument } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
-import { canAccessDocument, canEditDocument, canDeleteDocument } from "@/lib/authorization";
+import { canAccessDocument, canEditDocument, canDeleteDocument, canFinalizeDocument, canCancelDocument } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -92,12 +92,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const existing = await prisma.document.findUnique({ where: { id }, select: { status: true } });
+    const existing = await prisma.document.findUnique({ where: { id }, select: { status: true, num: true } });
     if (!existing) return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
-
-    if (!canEditDocument(existing.status)) {
-      return NextResponse.json({ error: "Ce document ne peut plus être modifié" }, { status: 403 });
-    }
 
     const body = await request.json();
     const parsed = documentUpdateSchema.safeParse(body);
@@ -105,14 +101,41 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
 
+    const newStatus = parsed.data.status;
+    if (newStatus && newStatus !== existing.status) {
+      if (newStatus === "EMISE") {
+        if (!canFinalizeDocument(existing.status)) {
+          return NextResponse.json({ error: "Ce document ne peut pas être finalisé depuis son état actuel" }, { status: 403 });
+        }
+      } else if (newStatus === "CANCELLED") {
+        if (!canCancelDocument(existing.status)) {
+          return NextResponse.json({ error: "Ce document ne peut pas être annulé" }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ error: `Transition de statut invalide: ${existing.status} → ${newStatus}` }, { status: 403 });
+      }
+    }
+
+    if (!newStatus && !canEditDocument(existing.status)) {
+      return NextResponse.json({ error: "Ce document ne peut plus être modifié" }, { status: 403 });
+    }
+
     const doc = await updateDocument(id, parsed.data);
 
+    let auditAction = "DOCUMENT_UPDATED";
+    if (newStatus === "EMISE" && existing.status !== "EMISE") {
+      auditAction = "DOCUMENT_FINALIZED";
+    } else if (newStatus === "CANCELLED" && existing.status !== "CANCELLED") {
+      auditAction = "DOCUMENT_CANCELLED";
+    }
+
     await createAuditEvent({
-      action: "DOCUMENT_UPDATED",
+      action: auditAction as any,
       entityType: "document",
       entityId: doc.id,
       entityNum: doc.num,
       userId: user.id,
+      details: newStatus !== existing.status ? { from: existing.status, to: newStatus } : undefined,
     });
 
     return NextResponse.json(doc);

@@ -8,6 +8,8 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "";
 const PUBLIC_PATHS = ["/api/auth/login", "/api/auth/logout", "/login"];
 const PUBLIC_STATIC = ["/_next", "/favicon.ico", "/images", "/api/health"];
 
+const STATIC_EXTENSIONS = [".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".map", ".json"];
+
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
@@ -93,7 +95,7 @@ function addSecurityHeaders(response: NextResponse, nonce?: string): NextRespons
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_STATIC.some((p) => pathname.startsWith(p)) || pathname.includes(".")) {
+  if (PUBLIC_STATIC.some((p) => pathname.startsWith(p)) || STATIC_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
     return addSecurityHeaders(NextResponse.next());
   }
 

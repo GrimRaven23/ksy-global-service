@@ -31,7 +31,7 @@ export async function canAccessCustomer(user: SessionUser, customerId: string): 
   if (user.role === "OWNER" || user.role === "IT_ADMIN" || user.role === "ADMIN") {
     return true;
   }
-  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER"].includes(user.role);
+  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER", "SALES", "DELIVERY", "WAREHOUSE", "ASSISTANT", "PROJECT_MANAGER"].includes(user.role);
 }
 
 export function canEditDocument(status: string): boolean {

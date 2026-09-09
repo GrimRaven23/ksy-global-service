@@ -154,12 +154,20 @@ export async function getDeliveryNote(id: string) {
   });
 }
 
-export async function listDeliveryNotes() {
-  return prisma.deliveryNote.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { items: true, customer: true, document: true },
-    take: 100,
-  });
+export async function listDeliveryNotes(page = 1, pageSize = 20) {
+  const skip = (page - 1) * pageSize;
+
+  const [items, total] = await Promise.all([
+    prisma.deliveryNote.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { items: true, customer: true, document: true },
+      skip,
+      take: pageSize,
+    }),
+    prisma.deliveryNote.count(),
+  ]);
+
+  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
 export async function deleteDeliveryNote(id: string) {

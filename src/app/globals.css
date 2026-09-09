@@ -3,15 +3,33 @@
 @theme inline {
   --color-navy: #0B1D3A;
   --color-navy-l: #132d52;
+  --color-navy-xl: #1a3a6b;
   --color-gold: #C8A84E;
   --color-gold-lt: #e8d59e;
   --color-gold-bg: #fdf8ee;
-  --color-bg: #f0f2f5;
+  --color-bg: #f4f5f7;
+  --color-bg-warm: #f8f7f4;
+  --color-surface: #ffffff;
   --color-txt: #1a1a2e;
-  --color-txt2: #5a6070;
-  --color-bdr: #dce0e6;
+  --color-txt2: #6b7280;
+  --color-txt3: #9ca3af;
+  --color-bdr: #e5e7eb;
+  --color-bdr-light: #f3f4f6;
   --color-red: #c0392b;
+  --color-red-bg: #fef2f2;
+  --color-green: #059669;
+  --color-green-bg: #ecfdf5;
+  --color-blue: #2563eb;
+  --color-blue-bg: #eff6ff;
+  --color-purple: #7c3aed;
+  --color-purple-bg: #f5f3ff;
   --font-sans: var(--font-geist), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --shadow-card: 0 1px 3px rgba(11,29,58,0.04), 0 1px 2px rgba(11,29,58,0.03);
+  --shadow-card-hover: 0 8px 25px rgba(11,29,58,0.08), 0 4px 10px rgba(11,29,58,0.04);
 }
 
 /* ─── Base ─────────────────────────────────────────────────── */
@@ -229,6 +247,20 @@ button.badge-pill, button.filter-pill, a.badge-pill {
 .animate-slide-in { animation: slide-in 0.25s ease-out; }
 .animate-slide-up { animation: slide-up 0.2s ease-out; }
 .animate-fade-in { animation: fade-in 0.3s ease-out; }
+
+/* ─── Gradient Helpers ─────────────────────────────────────── */
+.gradient-navy { background: linear-gradient(135deg, #0B1D3A 0%, #132d52 100%); }
+.gradient-gold { background: linear-gradient(135deg, #C8A84E 0%, #d4b85c 100%); }
+.gradient-mesh { background: radial-gradient(at 20% 80%, rgba(200,168,78,0.08) 0%, transparent 50%), radial-gradient(at 80% 20%, rgba(11,29,58,0.06) 0%, transparent 50%); }
+.stat-card-gradient { background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,247,244,0.9) 100%); }
+
+/* ─── Hover Effects ────────────────────────────────────────── */
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.hover-lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+
+/* ─── Table Enhancements ───────────────────────────────────── */
+.table-row-hover { transition: background-color 0.15s ease; }
+.table-row-hover:hover { background-color: #f9fafb; }
 
 /* ─── Scrollbar ──────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

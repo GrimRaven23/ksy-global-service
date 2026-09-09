@@ -183,20 +183,28 @@ export async function getDocument(id: string) {
   });
 }
 
-export async function listDocuments(type?: string) {
+export async function listDocuments(type?: string, page = 1, pageSize = 20) {
   const where = type ? { type: type as "PROFORMA" | "DEFINITIVE" } : {};
-  return prisma.document.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: {
-      items: true,
-      customer: true,
-      deliveryNotes: { select: { id: true, num: true } },
-      convertedFrom: { select: { id: true, num: true, type: true } },
-      conversions: { select: { id: true, num: true, type: true } },
-    },
-    take: 100,
-  });
+  const skip = (page - 1) * pageSize;
+
+  const [items, total] = await Promise.all([
+    prisma.document.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: true,
+        customer: true,
+        deliveryNotes: { select: { id: true, num: true } },
+        convertedFrom: { select: { id: true, num: true, type: true } },
+        conversions: { select: { id: true, num: true, type: true } },
+      },
+      skip,
+      take: pageSize,
+    }),
+    prisma.document.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
 export async function deleteDocument(id: string) {

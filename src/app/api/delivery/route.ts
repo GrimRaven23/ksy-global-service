@@ -25,8 +25,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(note);
     }
 
-    const notes = await listDeliveryNotes();
-    return NextResponse.json(notes);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "20", 10)));
+
+    const result = await listDeliveryNotes(page, pageSize);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("GET /api/delivery error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

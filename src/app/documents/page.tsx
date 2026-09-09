@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Trash2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { Card, Badge, SearchInput, Skeleton, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
+import { Card, Badge, SearchInput, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
 import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -44,7 +44,10 @@ export default function DocumentsPage() {
     ])
       .then(([me, pf, df, bl]) => {
         if (!me.user) { router.push("/login"); return; }
-        const pfDocs = (Array.isArray(pf) ? pf : []).map((d: Record<string, unknown>) => ({
+        const pfArr = pf?.items || (Array.isArray(pf) ? pf : []);
+        const dfArr = df?.items || (Array.isArray(df) ? df : []);
+        const blArr = bl?.items || (Array.isArray(bl) ? bl : []);
+        const pfDocs = pfArr.map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "PROFORMA", date: String(d.date),
           total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
           customerName: String(d.customerName || ""),
@@ -53,7 +56,7 @@ export default function DocumentsPage() {
           convertedFrom: d.convertedFrom || null,
           conversions: Array.isArray(d.conversions) ? d.conversions as { id: string; num: string; type: string }[] : [],
         }));
-        const dfDocs = (Array.isArray(df) ? df : []).map((d: Record<string, unknown>) => ({
+        const dfDocs = dfArr.map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "DEFINITIVE", date: String(d.date),
           total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
           customerName: String(d.customerName || ""),
@@ -62,7 +65,7 @@ export default function DocumentsPage() {
           convertedFrom: d.convertedFrom || null,
           conversions: Array.isArray(d.conversions) ? d.conversions as { id: string; num: string; type: string }[] : [],
         }));
-        const blDocs = (Array.isArray(bl) ? bl : []).map((d: Record<string, unknown>) => ({
+        const blDocs = blArr.map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
           total: 0, status: String(d.status), createdAt: String(d.createdAt),
           customerName: String(d.customerName || ""),

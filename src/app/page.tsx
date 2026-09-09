@@ -102,20 +102,28 @@ export default function Home() {
         </div>
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6">
+          {/* Welcome */}
+          <div className="bg-gradient-to-r from-navy to-navy-l rounded-xl p-5 sm:p-6 text-white">
+            <h1 className="text-lg sm:text-xl font-bold mb-1">
+              {new Date().getHours() < 12 ? "Bonjour" : new Date().getHours() < 18 ? "Bon après-midi" : "Bonsoir"}, {user?.name?.split(" ")[0]}
+            </h1>
+            <p className="text-sm text-white/70">Voici un aperçu de votre activité</p>
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {[
-              { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy", bg: "bg-navy/5" },
-              { label: "Revenus (FCFA)", value: fmtNum(stats.totalRevenue), icon: BarChart3, color: "text-green", bg: "bg-green-bg" },
-              { label: "Ce mois", value: stats.documentsThisMonth, icon: Clock, color: "text-blue", bg: "bg-blue-bg" },
-              { label: "Bons de livraison", value: stats.totalDeliveryNotes, icon: Truck, color: "text-gold", bg: "bg-gold-bg" },
+              { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy", bg: "bg-navy/5 dark:bg-navy/10" },
+              { label: "Revenus (FCFA)", value: fmtNum(stats.totalRevenue), icon: BarChart3, color: "text-green", bg: "bg-green-bg dark:bg-green/10" },
+              { label: "Ce mois", value: stats.documentsThisMonth, icon: Clock, color: "text-blue", bg: "bg-blue-bg dark:bg-blue/10" },
+              { label: "Livraisons", value: stats.totalDeliveryNotes, icon: Truck, color: "text-gold", bg: "bg-gold-bg dark:bg-gold/10" },
             ].map((s) => (
               <Card key={s.label} hover shadow className="flex items-center gap-3">
                 <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${s.bg} flex items-center justify-center ${s.color} shrink-0`}>
                   <s.icon className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-lg sm:text-xl font-bold text-navy truncate">{s.value}</p>
+                  <p className="text-lg sm:text-xl font-bold text-navy dark:text-white truncate">{s.value}</p>
                   <p className="text-[10px] sm:text-[11px] text-txt3 uppercase tracking-wide truncate">{s.label}</p>
                 </div>
               </Card>
@@ -125,13 +133,13 @@ export default function Home() {
           {/* Quick Actions */}
           {quickActions.length > 0 && (
             <div>
-              <h2 className="text-[11px] sm:text-xs font-bold text-navy uppercase tracking-wider mb-3">Créer un document</h2>
+              <h2 className="text-[11px] sm:text-xs font-bold text-navy dark:text-white uppercase tracking-wider mb-3">Créer un document</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 {quickActions.map((a) => (
                   <button
                     key={a.href}
                     onClick={() => router.push(a.href)}
-                    className={`bg-white border rounded-xl p-4 sm:p-5 text-left hover:shadow-card-hover transition-all duration-200 cursor-pointer group ${a.color}`}
+                    className={`bg-white dark:bg-surface border rounded-xl p-4 sm:p-5 text-left hover:shadow-card-hover transition-all duration-200 cursor-pointer group ${a.color}`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-navy/5 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -139,7 +147,7 @@ export default function Home() {
                       </div>
                       <ArrowRight className="w-4 h-4 text-txt3 group-hover:text-navy group-hover:translate-x-0.5 transition-all" />
                     </div>
-                    <h3 className="text-sm font-bold text-navy mb-0.5">{a.label}</h3>
+                    <h3 className="text-sm font-bold text-navy dark:text-white mb-0.5">{a.label}</h3>
                     <p className="text-[11px] sm:text-xs text-txt3">{a.desc}</p>
                   </button>
                 ))}
@@ -192,7 +200,7 @@ export default function Home() {
                         <button
                           key={d.id}
                           onClick={() => router.push(d.type === "BL" ? `/bl?id=${d.id}` : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
-                          className="w-full text-left border border-bdr/40 rounded-lg p-3 hover:border-navy/15 hover:bg-gray-50/50 transition-all cursor-pointer"
+                          className="w-full text-left border border-bdr/40 rounded-lg p-3 hover:border-navy/15 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all cursor-pointer"
                         >
                           <div className="flex items-start justify-between gap-2 mb-1.5">
                             <span className="text-xs font-bold text-navy">{d.num}</span>

@@ -52,10 +52,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   };
 
   const bgColors = {
-    success: "border-green-200 bg-green-50",
-    error: "border-red-200 bg-red-50",
-    info: "border-blue-200 bg-blue-50",
-    warning: "border-amber-200 bg-amber-50",
+    success: "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/50",
+    error: "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/50",
+    info: "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/50",
+    warning: "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/50",
   };
 
   return (

@@ -66,16 +66,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           aria-labelledby="confirm-title"
           aria-describedby="confirm-message"
         >
-          <div className="bg-white rounded-xl border border-bdr shadow-2xl p-6 max-w-sm w-full mx-4 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-surface rounded-xl border border-bdr shadow-2xl p-6 max-w-sm w-full mx-4 animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <h3 id="confirm-title" className="text-sm font-bold text-navy">{state.title}</h3>
+              <h3 id="confirm-title" className="text-sm font-bold text-navy dark:text-white">{state.title}</h3>
             </div>
             <p id="confirm-message" className="text-xs text-txt2 mb-6 pl-[52px]">{state.message}</p>
             <div className="flex gap-2 justify-end">
-              <button data-confirm-cancel onClick={handleCancel} className="px-4 py-2 text-xs font-semibold text-txt2 bg-white border border-bdr rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+              <button data-confirm-cancel onClick={handleCancel} className="px-4 py-2 text-xs font-semibold text-txt2 bg-white dark:bg-surface border border-bdr rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
                 Annuler
               </button>
               <button onClick={handleConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-navy rounded-lg hover:bg-navy-l transition-colors cursor-pointer">

@@ -43,7 +43,7 @@ export async function POST(
 
     await prisma.user.update({
       where: { id },
-      data: { passwordHash: newHash },
+      data: { passwordHash: newHash, mustChangePassword: true },
     });
 
     await createAuditEvent({

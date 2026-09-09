@@ -3,6 +3,8 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { deliveryCreateSchema, deliveryUpdateSchema } from "@/lib/validation";
 import { createDeliveryNote, updateDeliveryNote, listDeliveryNotes, deleteDeliveryNote, getDeliveryNote } from "@/lib/services/delivery";
 import { createAuditEvent } from "@/lib/services/audit";
+import { canAccessDeliveryNote, canEditDeliveryNote } from "@/lib/authorization";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,6 +17,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (id) {
+      if (!await canAccessDeliveryNote(user, id)) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      }
       const note = await getDeliveryNote(id);
       if (!note) return NextResponse.json({ error: "Bon de livraison non trouvé" }, { status: 404 });
       return NextResponse.json(note);
@@ -71,6 +76,17 @@ export async function PUT(request: NextRequest) {
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
+    if (!await canAccessDeliveryNote(user, id)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const existing = await prisma.deliveryNote.findUnique({ where: { id }, select: { status: true } });
+    if (!existing) return NextResponse.json({ error: "Bon de livraison non trouvé" }, { status: 404 });
+
+    if (!canEditDeliveryNote(existing.status)) {
+      return NextResponse.json({ error: "Ce bon de livraison ne peut plus être modifié" }, { status: 403 });
+    }
+
     const body = await request.json();
     const parsed = deliveryUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -105,6 +121,10 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
+
+    if (!await canAccessDeliveryNote(user, id)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
 
     const note = await deleteDeliveryNote(id);
 

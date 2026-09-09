@@ -4,6 +4,7 @@ import { createBLFromDocSchema } from "@/lib/validation";
 import { createDeliveryNote } from "@/lib/services/delivery";
 import { createAuditEvent } from "@/lib/services/audit";
 import { prisma } from "@/lib/prisma";
+import { canAccessDocument } from "@/lib/authorization";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,10 @@ export async function POST(request: NextRequest) {
     const parsed = createBLFromDocSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "ID document requis" }, { status: 400 });
+    }
+
+    if (!await canAccessDocument(user, parsed.data.documentId)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
     const sourceDoc = await prisma.document.findUnique({
@@ -62,6 +67,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(note, { status: 201 });
   } catch (error: unknown) {
     console.error("POST /api/documents/create-bl error:", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur lors de la création du bon de livraison" }, { status: 500 });
   }
 }

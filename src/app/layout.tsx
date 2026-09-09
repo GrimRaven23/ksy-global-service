@@ -20,6 +20,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col bg-bg text-txt">
         <ToastProvider>
           <ConfirmProvider>
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[9999] focus:bg-navy focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
+            >
+              Aller au contenu principal
+            </a>
             {children}
           </ConfirmProvider>
         </ToastProvider>

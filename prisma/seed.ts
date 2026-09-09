@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, generateRandomPassword } from "@/lib/auth/password";
 
 async function main() {
   console.log("Seeding database...");
@@ -36,16 +36,19 @@ async function main() {
   const ownerEmail = "admin@ksy-global.com";
   const existingOwner = await prisma.user.findUnique({ where: { email: ownerEmail } });
   if (!existingOwner) {
+    const tempPassword = generateRandomPassword();
     await prisma.user.create({
       data: {
         email: ownerEmail,
         name: "Administrateur KSY",
-        passwordHash: hashPassword("Admin@12345"),
+        passwordHash: hashPassword(tempPassword),
         role: "OWNER",
         status: "ACTIVE",
+        mustChangePassword: true,
       },
     });
-    console.log("✓ Default owner created (admin@ksy-global.com / Admin@12345)");
+    console.log(`✓ Default owner created (admin@ksy-global.com / ${tempPassword})`);
+    console.log("  ⚠ MUST CHANGE PASSWORD ON FIRST LOGIN");
   } else {
     console.log("✓ Owner user already exists");
   }

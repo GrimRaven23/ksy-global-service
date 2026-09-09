@@ -10,12 +10,25 @@ function nextNum(seqType: string, year: number): string {
 async function getNextNumber(tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>, type: "PROFORMA" | "DEFINITIVE"): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = nextNum(type, year);
-  const seq = await tx.documentSequence.upsert({
+  const existing = await tx.documentSequence.findUnique({
     where: { type_year: { type, year } },
-    update: { nextNumber: { increment: 1 } },
-    create: { type, year, nextNumber: 1 },
   });
-  const num = String(seq.nextNumber).padStart(3, "0");
+
+  let nextNumber: number;
+  if (existing) {
+    const updated = await tx.documentSequence.update({
+      where: { id: existing.id },
+      data: { nextNumber: { increment: 1 } },
+    });
+    nextNumber = updated.nextNumber;
+  } else {
+    const created = await tx.documentSequence.create({
+      data: { type, year, nextNumber: 1 },
+    });
+    nextNumber = created.nextNumber;
+  }
+
+  const num = String(nextNumber).padStart(3, "0");
   return `${prefix}${num}`;
 }
 
@@ -238,6 +251,14 @@ export async function convertProformaToDefinitive(
   const total = subtotal + tvaAmount;
 
   return prisma.$transaction(async (tx) => {
+    const alreadyConverted = await tx.document.findFirst({
+      where: { convertedFromId: source.id },
+      select: { id: true },
+    });
+    if (alreadyConverted) {
+      throw new Error("Cette facture pro forma a déjà été convertie en facture définitive");
+    }
+
     const num = await getNextNumber(tx, "DEFINITIVE");
 
     const definitive = await tx.document.create({

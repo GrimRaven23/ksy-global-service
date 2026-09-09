@@ -3,6 +3,7 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { convertDocumentSchema } from "@/lib/validation";
 import { convertProformaToDefinitive } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
+import { canAccessDocument } from "@/lib/authorization";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,10 @@ export async function POST(request: NextRequest) {
     const parsed = convertDocumentSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
+    }
+
+    if (!await canAccessDocument(user, parsed.data.documentId)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
     const definitive = await convertProformaToDefinitive(parsed.data.documentId, {
@@ -40,7 +45,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(definitive, { status: 201 });
   } catch (error: unknown) {
     console.error("POST /api/documents/convert error:", error);
-    const message = error instanceof Error ? error.message : "Erreur serveur";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: "Erreur lors de la conversion du document" }, { status: 400 });
   }
 }

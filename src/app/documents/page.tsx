@@ -172,63 +172,112 @@ export default function DocumentsPage() {
             {filtered.length === 0 ? (
               <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document trouvé." />
             ) : (
-              <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
-                <table className="w-full min-w-[600px]">
-                  <thead>
-                    <tr className="border-b border-bdr">
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden sm:table-cell">Date</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden md:table-cell">Client</th>
-                      <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden lg:table-cell">Livraison</th>
-                      <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((d) => (
-                      <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
-                        <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
-                        <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
-                        <td className="py-2.5 text-xs text-txt2 hidden sm:table-cell">{relativeTime(d.createdAt)}</td>
-                        <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{d.customerName || "—"}</td>
-                        <td className="py-2.5 text-xs sm:text-sm text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
-                        <td className="py-2.5">
-                          <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
-                          {d.convertedFrom && (
-                            <span className="text-[9px] text-purple-600 block mt-0.5">de {d.convertedFrom.num}</span>
-                          )}
-                          {d.conversions && d.conversions.length > 0 && (
-                            <span className="text-[9px] text-purple-600 block mt-0.5">→ {d.conversions[0].num}</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 text-[11px] hidden lg:table-cell">
-                          {d.deliveryNotes && d.deliveryNotes.length > 0 ? (
-                            <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy font-semibold hover:underline cursor-pointer">
-                              {d.deliveryNotes![0].num}
-                            </button>
-                          ) : d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" ? (
-                            <button onClick={() => handleCreateBL(d)} className="text-gold font-semibold hover:underline cursor-pointer text-[11px]">
-                              + Créer BL
-                            </button>
-                          ) : (
-                            <span className="text-txt2">—</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openDoc(d)} className="text-[11px] sm:text-xs text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>
-                            <button onClick={() => handleDelete(d.id, d.type)} className="p-2 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
+              <>
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
+                  <table className="w-full min-w-[600px]">
+                    <thead>
+                      <tr className="border-b border-bdr">
+                        <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                        <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                        <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden md:table-cell">Date</th>
+                        <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden md:table-cell">Client</th>
+                        <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                        <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
+                        <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden lg:table-cell">Livraison</th>
+                        <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filtered.map((d) => (
+                        <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
+                          <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
+                          <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
+                          <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{relativeTime(d.createdAt)}</td>
+                          <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{d.customerName || "—"}</td>
+                          <td className="py-2.5 text-xs sm:text-sm text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
+                          <td className="py-2.5">
+                            <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
+                            {d.convertedFrom && (
+                              <span className="text-[9px] text-purple-600 block mt-0.5">de {d.convertedFrom.num}</span>
+                            )}
+                            {d.conversions && d.conversions.length > 0 && (
+                              <span className="text-[9px] text-purple-600 block mt-0.5">→ {d.conversions[0].num}</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 text-[11px] hidden lg:table-cell">
+                            {d.deliveryNotes && d.deliveryNotes.length > 0 ? (
+                              <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy font-semibold hover:underline cursor-pointer">
+                                {d.deliveryNotes![0].num}
+                              </button>
+                            ) : d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" ? (
+                              <button onClick={() => handleCreateBL(d)} className="text-gold font-semibold hover:underline cursor-pointer text-[11px]">
+                                + Créer BL
+                              </button>
+                            ) : (
+                              <span className="text-txt2">—</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => openDoc(d)} className="text-[11px] sm:text-xs text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>
+                              <button onClick={() => handleDelete(d.id, d.type)} className="p-2 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile card list */}
+                <div className="sm:hidden space-y-2">
+                  {filtered.map((d) => (
+                    <div
+                      key={d.id}
+                      className="border border-bdr/50 rounded-lg p-3 hover:border-navy/20 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="min-w-0">
+                          <button onClick={() => openDoc(d)} className="text-xs font-bold text-navy hover:underline cursor-pointer text-left">{d.num}</button>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge>
+                            <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
+                          </div>
+                        </div>
+                        <button onClick={() => handleDelete(d.id, d.type)} className="p-1.5 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5 shrink-0" aria-label="Supprimer ce document">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      {d.customerName && (
+                        <p className="text-[11px] text-txt2 mb-1 truncate">{d.customerName}</p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-txt2">{relativeTime(d.createdAt)}</span>
+                        <span className="text-xs font-bold text-navy">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</span>
+                      </div>
+                      {d.convertedFrom && (
+                        <p className="text-[9px] text-purple-600 mt-1">de {d.convertedFrom.num}</p>
+                      )}
+                      {d.conversions && d.conversions.length > 0 && (
+                        <p className="text-[9px] text-purple-600 mt-1">→ {d.conversions[0].num}</p>
+                      )}
+                      {d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" && !d.deliveryNotes?.length && (
+                        <button onClick={() => handleCreateBL(d)} className="text-[11px] text-gold font-semibold hover:underline cursor-pointer mt-1">
+                          + Créer BL
+                        </button>
+                      )}
+                      {d.deliveryNotes && d.deliveryNotes.length > 0 && (
+                        <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-[11px] text-navy font-semibold hover:underline cursor-pointer mt-1">
+                          BL: {d.deliveryNotes[0].num}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </Card>
         )}

@@ -152,34 +152,58 @@ export default function Home() {
                 {recentDocs.length === 0 ? (
                   <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document. Créez votre premier document !" action="Créer un document" onAction={() => router.push("/proforma")} />
                 ) : (
-                  <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
-                    <table className="w-full min-w-[500px]">
-                      <thead>
-                        <tr className="border-b border-bdr">
-                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
-                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
-                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden sm:table-cell">Client</th>
-                          <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
-                          <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentDocs.map((d) => (
-                          <tr
-                            key={d.id}
-                            className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                            onClick={() => router.push(d.type === "BL" ? `/bl?id=${d.id}` : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
-                          >
-                            <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy">{d.num}</td>
-                            <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
-                            <td className="py-2.5 text-xs text-txt2 hidden sm:table-cell">{d.customerName || "—"}</td>
-                            <td className="py-2.5 text-xs sm:text-sm text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
-                            <td className="py-2.5"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+                  <>
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
+                      <table className="w-full min-w-[500px]">
+                        <thead>
+                          <tr className="border-b border-bdr">
+                            <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Num</th>
+                            <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Type</th>
+                            <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden md:table-cell">Client</th>
+                            <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Total</th>
+                            <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {recentDocs.map((d) => (
+                            <tr
+                              key={d.id}
+                              className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                              onClick={() => router.push(d.type === "BL" ? `/bl?id=${d.id}` : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
+                            >
+                              <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy">{d.num}</td>
+                              <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
+                              <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{d.customerName || "—"}</td>
+                              <td className="py-2.5 text-xs sm:text-sm text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
+                              <td className="py-2.5"><Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile card list */}
+                    <div className="sm:hidden space-y-2">
+                      {recentDocs.map((d) => (
+                        <button
+                          key={d.id}
+                          onClick={() => router.push(d.type === "BL" ? `/bl?id=${d.id}` : `/${d.type === "PROFORMA" ? "proforma" : "definitive"}?id=${d.id}`)}
+                          className="w-full text-left border border-bdr/50 rounded-lg p-3 hover:border-navy/20 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className="text-xs font-bold text-navy">{d.num}</span>
+                            <span className="text-xs font-bold text-navy">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge>
+                            <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
+                            {d.customerName && <span className="text-[10px] text-txt2 truncate ml-1">{d.customerName}</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
               </Card>
             </div>

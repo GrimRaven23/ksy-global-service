@@ -32,17 +32,18 @@ enum UserStatus {
 }
 
 model User {
-  id            String      @id @default(cuid())
-  email         String      @unique
-  name          String
-  passwordHash  String      @map("password_hash")
-  role          UserRole    @default(SALES)
-  status        UserStatus  @default(ACTIVE)
-  lastLoginAt   DateTime?   @map("last_login_at")
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  id                 String      @id @default(cuid())
+  email              String      @unique
+  name               String
+  passwordHash       String      @map("password_hash")
+  mustChangePassword Boolean     @default(false) @map("must_change_password")
+  role               UserRole    @default(SALES)
+  status             UserStatus  @default(ACTIVE)
+  lastLoginAt        DateTime?   @map("last_login_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
 
-  auditEvents   AuditEvent[]
+  auditEvents        AuditEvent[]
 
   @@map("users")
 }
@@ -103,6 +104,8 @@ model Customer {
   documents      Document[]
   deliveryNotes  DeliveryNote[]
 
+  @@index([name])
+  @@index([phone])
   @@map("customers")
 }
 
@@ -177,7 +180,7 @@ model Document {
   createdBy     String?        @map("created_by")
 
   // Conversion tracking: PF → DF
-  convertedFromId String?     @map("converted_from_id")
+  convertedFromId String?     @unique @map("converted_from_id")
   convertedFrom   Document?   @relation("DocumentConversion", fields: [convertedFromId], references: [id])
   conversions     Document[]  @relation("DocumentConversion")
 
@@ -193,6 +196,21 @@ model Document {
   @@index([createdBy])
   @@index([convertedFromId])
   @@map("documents")
+}
+
+model DocumentVersion {
+  id            String   @id @default(cuid())
+  documentId    String   @map("document_id")
+  version       Int
+  snapshot      Json
+  changedBy     String?  @map("changed_by")
+  changeSummary String?  @map("change_summary")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("document_versions")
 }
 
 model DocumentItem {
@@ -257,6 +275,7 @@ model DeliveryNote {
 
   @@index([date])
   @@index([num])
+  @@index([status])
   @@index([customerId])
   @@index([documentId])
   @@index([createdBy])
@@ -354,4 +373,18 @@ model DocumentSequence {
 
   @@unique([type, year])
   @@map("document_sequences")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RATE LIMITING
+// ═══════════════════════════════════════════════════════════════
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(0)
+  resetAt   DateTime @map("reset_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("rate_limits")
 }

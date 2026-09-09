@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission, canManageRole } from "@/lib/auth/session";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, generateRandomPassword } from "@/lib/auth/password";
 import { userCreateSchema, userUpdateSchema } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -52,12 +52,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
     }
 
+    const tempPassword = parsed.data.password || generateRandomPassword();
     const newUser = await prisma.user.create({
       data: {
         email: parsed.data.email,
         name: parsed.data.name,
-        passwordHash: hashPassword(parsed.data.password),
+        passwordHash: hashPassword(tempPassword),
         role: targetRole,
+        mustChangePassword: true,
       },
       select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
     });
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       details: { email: newUser.email, role: newUser.role },
     });
 
-    return NextResponse.json(newUser, { status: 201 });
+    return NextResponse.json({ ...newUser, tempPassword }, { status: 201 });
   } catch (error: unknown) {
     console.error("POST /api/users error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

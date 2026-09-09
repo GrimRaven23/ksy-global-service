@@ -24,6 +24,7 @@ interface DocData {
   validity: string;
   ref: string;
   saleMode: string;
+  status: string;
   tvaOn: boolean;
   tvaRate: number;
   clientName: string;
@@ -43,6 +44,7 @@ function blankDoc(): DocData {
     validity: "",
     ref: "",
     saleMode: "directe",
+    status: "DRAFT",
     tvaOn: false,
     tvaRate: 18,
     clientName: "",
@@ -94,6 +96,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
           validity: existing.validity?.split("T")[0] || "",
           ref: existing.ref || "",
           saleMode: (existing.saleMode || "DIRECTE").toLowerCase(),
+          status: existing.status || "DRAFT",
           tvaOn: existing.tvaOn,
           tvaRate: Number(existing.tvaRate) || 18,
           clientName: existing.customerName || existing.customer?.name || "",
@@ -213,23 +216,56 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     setIsSaving(false);
   };
 
-  const handlePrint = useCallback(() => {
+  const handlePrint = useCallback(async () => {
+    if (doc.id && isDirty.current) {
+      const payload = buildPayload(doc);
+      try {
+        await fetch(`/api/documents?id=${doc.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        isDirty.current = false;
+      } catch {
+        toast.error("Erreur de sauvegarde avant impression.");
+        return;
+      }
+    }
     setPrintActive(true);
     setTimeout(() => {
       window.print();
       setTimeout(() => setPrintActive(false), 500);
     }, 50);
-  }, []);
+    if (doc.id) {
+      fetch("/api/audit/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DOCUMENT_PRINTED",
+          entityType: "document",
+          entityId: doc.id,
+          entityNum: doc.num,
+          details: { type },
+        }),
+      }).catch(() => {});
+    }
+  }, [doc, type]);
 
   const autoSave = useDebounce(async (documentData: DocData) => {
     if (!documentData.id || !isDirty.current || isInitialLoad.current) return;
     const payload = buildPayload(documentData);
-    await fetch(`/api/documents?id=${documentData.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    isDirty.current = false;
+    try {
+      const res = await fetch(`/api/documents?id=${documentData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        isDirty.current = false;
+      }
+    } catch {
+      // Keep isDirty true so next change triggers another save attempt
+    }
   }, 1000);
 
   useEffect(() => {
@@ -306,6 +342,50 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     router.push(isPF ? "/proforma" : "/definitive");
   };
 
+  const handleFinalize = async () => {
+    if (!doc.id) { toast.error("Sauvegardez d'abord."); return; }
+    const ok = await confirm("Finaliser ce document ? Il ne pourra plus être modifié.");
+    if (!ok) return;
+    try {
+      await fetch(`/api/documents?id=${doc.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "EMISE" }),
+      });
+      setDoc((d) => ({ ...d, status: "EMISE" }));
+      fetch("/api/audit/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "DOCUMENT_FINALIZED", entityType: "document", entityId: doc.id, entityNum: doc.num }),
+      }).catch(() => {});
+      toast.success("Document finalisé");
+    } catch {
+      toast.error("Erreur lors de la finalisation");
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!doc.id) { toast.error("Sauvegardez d'abord."); return; }
+    const ok = await confirm("Annuler ce document ?");
+    if (!ok) return;
+    try {
+      await fetch(`/api/documents?id=${doc.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      });
+      setDoc((d) => ({ ...d, status: "CANCELLED" }));
+      fetch("/api/audit/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "DOCUMENT_CANCELLED", entityType: "document", entityId: doc.id, entityNum: doc.num }),
+      }).catch(() => {});
+      toast.success("Document annulé");
+    } catch {
+      toast.error("Erreur lors de l'annulation");
+    }
+  };
+
   if (loadError) {
     return (
       <AppShell hideNav>
@@ -345,6 +425,15 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
               {isPF ? "Facture Pro Forma" : "Facture Définitive"}
             </span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              {doc.id && (
+                <span className={`text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1 rounded hidden sm:block ${
+                  doc.status === "DRAFT" ? "bg-gray-100 text-gray-600" :
+                  doc.status === "EMISE" ? "bg-navy/10 text-navy" :
+                  doc.status === "CONVERTED" ? "bg-purple-100 text-purple-700" :
+                  doc.status === "CANCELLED" ? "bg-red-100 text-red-700" :
+                  "bg-gray-100 text-gray-600"
+                }`}>{doc.status}</span>
+              )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
               <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
                 Nouvelle
@@ -355,7 +444,17 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
               <button onClick={handlePrint} className="bg-navy text-white border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy-l">
                 Imprimer
               </button>
-              {isPF && doc.id && (
+              {doc.id && doc.status === "DRAFT" && (
+                <>
+                  <button onClick={handleFinalize} className="bg-green-600 text-white border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-green-700 hidden md:block">
+                    Finaliser
+                  </button>
+                  <button onClick={handleCancel} className="bg-red text-white border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-red/90 hidden md:block">
+                    Annuler
+                  </button>
+                </>
+              )}
+              {isPF && doc.id && doc.status === "DRAFT" && (
                 <button onClick={handleConvertToDefinitive} className="bg-gold text-navy border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-[#b89840] hidden md:block">
                   Transformer en Définitive
                 </button>

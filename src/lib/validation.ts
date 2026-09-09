@@ -144,7 +144,7 @@ export const loginSchema = z.object({
 export const userCreateSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(200),
-  password: z.string().min(8).max(200),
+  password: z.string().min(8).max(200).optional(),
   role: z.enum(["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "ASSISTANT", "PROJECT_MANAGER", "DELIVERY", "WAREHOUSE", "COMPLIANCE", "VIEWER"]),
 });
 

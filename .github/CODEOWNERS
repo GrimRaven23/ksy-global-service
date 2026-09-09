@@ -1,0 +1,17 @@
+# Code Owners — KSY Global Service
+
+# Default owners for everything
+* @GrimRaven23
+
+# Security-sensitive code
+src/lib/auth/ @GrimRaven23
+src/middleware.ts @GrimRaven23
+src/lib/csrf.ts @GrimRaven23
+src/lib/rate-limit.ts @GrimRaven23
+
+# Database schema
+prisma/ @GrimRaven23
+
+# Infrastructure
+terraform/ @GrimRaven23
+.github/ @GrimRaven23

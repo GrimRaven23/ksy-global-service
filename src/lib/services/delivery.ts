@@ -17,12 +17,25 @@ function deliveryCompanySnap(full: ReturnType<typeof snapshotCompany>) {
 async function getNextBLNumber(tx: TransactionClient): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `BL-${year}-`;
-  const seq = await tx.documentSequence.upsert({
+  const existing = await tx.documentSequence.findUnique({
     where: { type_year: { type: "DELIVERY", year } },
-    update: { nextNumber: { increment: 1 } },
-    create: { type: "DELIVERY", year, nextNumber: 1 },
   });
-  const num = String(seq.nextNumber).padStart(3, "0");
+
+  let nextNumber: number;
+  if (existing) {
+    const updated = await tx.documentSequence.update({
+      where: { id: existing.id },
+      data: { nextNumber: { increment: 1 } },
+    });
+    nextNumber = updated.nextNumber;
+  } else {
+    const created = await tx.documentSequence.create({
+      data: { type: "DELIVERY", year, nextNumber: 1 },
+    });
+    nextNumber = created.nextNumber;
+  }
+
+  const num = String(nextNumber).padStart(3, "0");
   return `${prefix}${num}`;
 }
 

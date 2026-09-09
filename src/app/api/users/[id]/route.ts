@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission, canManageRole } from "@/lib/auth/session";
+import { userUpdateSchema } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
 import type { AuditAction } from "@prisma/client";
@@ -56,9 +57,10 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, email, role, status } = body as {
-      name?: string; email?: string; role?: string; status?: string;
-    };
+    const parsed = userUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
+    }
 
     const target = await prisma.user.findUnique({ where: { id }, select: { role: true, email: true } });
     if (!target) {
@@ -66,12 +68,16 @@ export async function PUT(
     }
 
     const updateData: Record<string, unknown> = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
+    if (parsed.data.name) updateData.name = parsed.data.name;
+    if (parsed.data.email) updateData.email = parsed.data.email;
 
-    if (!isSelf) {
-      if (role && role !== target.role) {
-        if (!canManageRole(user.role, role)) {
+    if (isSelf) {
+      if (parsed.data.role || parsed.data.status) {
+        return NextResponse.json({ error: "Vous ne pouvez pas modifier votre propre rôle ou statut" }, { status: 403 });
+      }
+    } else {
+      if (parsed.data.role && parsed.data.role !== target.role) {
+        if (!canManageRole(user.role, parsed.data.role)) {
           return NextResponse.json(
             { error: "Vous ne pouvez pas attribuer ce niveau d'accès" },
             { status: 403 }
@@ -84,19 +90,19 @@ export async function PUT(
           );
         }
       }
-      if (role) updateData.role = role;
-      if (status) updateData.status = status;
+      if (parsed.data.role) updateData.role = parsed.data.role;
+      if (parsed.data.status) updateData.status = parsed.data.status;
     }
 
-    if (!isSelf && status === "DISABLED" && target.role === "OWNER") {
+    if (!isSelf && parsed.data.status === "DISABLED" && target.role === "OWNER") {
       const activeOwners = await prisma.user.count({ where: { role: "OWNER", status: "ACTIVE" } });
       if (activeOwners <= 1) {
         return NextResponse.json({ error: "Impossible de désactiver le dernier propriétaire actif" }, { status: 400 });
       }
     }
 
-    if (email && email !== target.email) {
-      const existing = await prisma.user.findUnique({ where: { email } });
+    if (parsed.data.email && parsed.data.email !== target.email) {
+      const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
       if (existing) {
         return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
       }
@@ -112,9 +118,9 @@ export async function PUT(
     });
 
     let action: AuditAction = "USER_UPDATED";
-    if (status === "DISABLED") action = "USER_DISABLED";
-    else if (status === "ACTIVE") action = "USER_ENABLED";
-    else if (role) action = "ROLE_CHANGED";
+    if (parsed.data.status === "DISABLED") action = "USER_DISABLED";
+    else if (parsed.data.status === "ACTIVE") action = "USER_ENABLED";
+    else if (parsed.data.role) action = "ROLE_CHANGED";
 
     await createAuditEvent({
       action,

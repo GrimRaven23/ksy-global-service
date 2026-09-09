@@ -1,52 +1,42 @@
 import crypto from "crypto";
 
-const CSRF_SECRET = process.env.SESSION_SECRET!;
-if (!CSRF_SECRET) {
-  throw new Error("SESSION_SECRET is required for CSRF protection");
-}
+const CSRF_COOKIE = "csrf_token";
+const CSRF_HEADER = "x-csrf-token";
 const CSRF_MAX_AGE = 60 * 60; // 1 hour
 
 export function generateCsrfToken(): string {
-  const payload = JSON.stringify({
-    iat: Date.now(),
-    exp: Date.now() + CSRF_MAX_AGE * 1000,
-    nonce: crypto.randomBytes(16).toString("hex"),
-  });
-  const signature = crypto.createHmac("sha256", CSRF_SECRET).update(payload).digest("hex");
-  return Buffer.from(payload).toString("base64url") + "." + signature;
+  return crypto.randomBytes(32).toString("hex");
 }
 
-export function verifyCsrfToken(token: string): boolean {
-  try {
-    const [payloadB64, signature] = token.split(".");
-    if (!payloadB64 || !signature) return false;
-    const payload = Buffer.from(payloadB64, "base64url").toString();
-    const expected = crypto.createHmac("sha256", CSRF_SECRET).update(payload).digest("hex");
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false;
-    const data = JSON.parse(payload);
-    if (data.exp && Date.now() > data.exp) return false;
+export function getCsrfCookieName(): string {
+  return CSRF_COOKIE;
+}
+
+export function getCsrfHeaderName(): string {
+  return CSRF_HEADER;
+}
+
+export function getCsrfMaxAge(): number {
+  return CSRF_MAX_AGE;
+}
+
+export function validateCsrf(request: Request, cookies: { get: (name: string) => { value: string } | undefined }): boolean {
+  const method = request.method.toUpperCase();
+
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     return true;
-  } catch {
+  }
+
+  const cookieToken = cookies.get(CSRF_COOKIE)?.value;
+  const headerToken = request.headers.get(CSRF_HEADER);
+
+  if (!cookieToken || !headerToken) {
     return false;
   }
-}
 
-export function validateCsrf(request: Request): boolean {
-  if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
-    return true;
+  if (cookieToken.length !== headerToken.length) {
+    return false;
   }
 
-  const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
-
-  if (origin && host) {
-    try {
-      const originHost = new URL(origin).host;
-      if (originHost !== host) return false;
-    } catch {
-      return false;
-    }
-  }
-
-  return true;
+  return crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
 }

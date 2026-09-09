@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
@@ -6,6 +7,7 @@ import { loginSchema } from "@/lib/validation";
 import { createAuditEvent } from "@/lib/services/audit";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { logger } from "@/lib/logging";
+import { generateCsrfToken, getCsrfCookieName, getCsrfMaxAge } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,8 +75,18 @@ export async function POST(request: NextRequest) {
       role: user.role,
     });
 
+    const csrfToken = generateCsrfToken();
+    const cookieStore = await cookies();
+    cookieStore.set(getCsrfCookieName(), csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: getCsrfMaxAge(),
+    });
+
     logger.info("Login successful", "auth", { userId: user.id, email: user.email, role: user.role });
-    return apiSuccess({ id: user.id, name: user.name, role: user.role });
+    return apiSuccess({ id: user.id, name: user.name, role: user.role, mustChangePassword: user.mustChangePassword });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     logger.error(`Login error: ${detail}`, "auth", undefined, error);

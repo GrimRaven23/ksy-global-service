@@ -331,4 +331,5 @@ export interface SessionUser {
   email: string;
   name: string;
   role: string;
+  mustChangePassword?: boolean;
 }

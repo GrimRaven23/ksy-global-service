@@ -41,7 +41,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       }
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+
+    const timer = setTimeout(() => {
+      const btn = document.querySelector('[data-confirm-cancel]') as HTMLButtonElement | null;
+      btn?.focus();
+    }, 50);
+
+    return () => {
+      window.removeEventListener("keydown", handler);
+      clearTimeout(timer);
+    };
   }, [state]);
 
   return (
@@ -66,7 +75,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             </div>
             <p id="confirm-message" className="text-xs text-txt2 mb-6 pl-[52px]">{state.message}</p>
             <div className="flex gap-2 justify-end">
-              <button onClick={handleCancel} className="px-4 py-2 text-xs font-semibold text-txt2 bg-white border border-bdr rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+              <button data-confirm-cancel onClick={handleCancel} className="px-4 py-2 text-xs font-semibold text-txt2 bg-white border border-bdr rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                 Annuler
               </button>
               <button onClick={handleConfirm} className="px-4 py-2 text-xs font-semibold text-white bg-navy rounded-lg hover:bg-navy-l transition-colors cursor-pointer">

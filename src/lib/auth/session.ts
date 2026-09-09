@@ -66,10 +66,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!payload) return null;
   const user = await prisma.user.findUnique({
     where: { id: payload.sub as string },
-    select: { id: true, email: true, name: true, role: true, status: true },
+    select: { id: true, email: true, name: true, role: true, status: true, mustChangePassword: true },
   });
   if (!user || user.status !== "ACTIVE") return null;
-  return { id: user.id, email: user.email, name: user.name, role: user.role };
+  return { id: user.id, email: user.email, name: user.name, role: user.role, mustChangePassword: user.mustChangePassword };
 }
 
 export async function requireAuth(): Promise<SessionUser> {

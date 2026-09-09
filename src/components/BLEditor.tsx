@@ -21,6 +21,7 @@ interface BLData {
   id?: string;
   num: string;
   date: string;
+  status: string;
   ref: string;
   orderRef: string;
   clientName: string;
@@ -39,6 +40,7 @@ function blankBL(): BLData {
   return {
     num: "",
     date: todayStr(),
+    status: "DRAFT",
     ref: "",
     orderRef: "",
     clientName: "",
@@ -88,6 +90,7 @@ export default function BLEditor() {
           id: existing.id,
           num: existing.num,
           date: existing.date?.split("T")[0] || todayStr(),
+          status: existing.status || "DRAFT",
           ref: "",
           orderRef: existing.orderRef || "",
           clientName: existing.customerName || existing.customer?.name || "",
@@ -198,12 +201,18 @@ export default function BLEditor() {
   const autoSave = useDebounce(async (documentData: BLData) => {
     if (!documentData.id || !isDirty.current || isInitialLoad.current) return;
     const payload = buildPayload(documentData);
-    await fetch(`/api/delivery?id=${documentData.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    isDirty.current = false;
+    try {
+      const res = await fetch(`/api/delivery?id=${documentData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        isDirty.current = false;
+      }
+    } catch {
+      // Keep isDirty true so next change triggers another save attempt
+    }
   }, 1000);
 
   useEffect(() => {
@@ -218,19 +227,67 @@ export default function BLEditor() {
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
-  const handlePrint = useCallback((copies: 1 | 2) => {
+  const handlePrint = useCallback(async (copies: 1 | 2) => {
+    if (doc.id && isDirty.current) {
+      try {
+        await fetch(`/api/delivery?id=${doc.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(doc),
+        });
+        isDirty.current = false;
+      } catch {
+        toast.error("Erreur de sauvegarde avant impression.");
+        return;
+      }
+    }
     setPrintCopies(copies);
     setTimeout(() => {
       window.print();
       setTimeout(() => setPrintCopies(0), 500);
     }, 50);
-  }, []);
+    if (doc.id) {
+      fetch("/api/audit/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DELIVERY_NOTE_PRINTED",
+          entityType: "delivery_note",
+          entityId: doc.id,
+          entityNum: doc.num,
+          details: { copies },
+        }),
+      }).catch(() => {});
+    }
+  }, [doc]);
 
   const handleNew = async () => {
     const ok = await confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.");
     if (!ok) return;
     setDoc(blankBL());
     router.push("/bl");
+  };
+
+  const handleConfirm = async () => {
+    if (!doc.id) { toast.error("Sauvegardez d'abord."); return; }
+    const ok = await confirm("Confirmer ce bon de livraison ?");
+    if (!ok) return;
+    try {
+      await fetch(`/api/delivery?id=${doc.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "EMISE" }),
+      });
+      setDoc((d) => ({ ...d, status: "EMISE" }));
+      fetch("/api/audit/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "DELIVERY_NOTE_CONFIRMED", entityType: "delivery_note", entityId: doc.id, entityNum: doc.num }),
+      }).catch(() => {});
+      toast.success("Bon de livraison confirmé");
+    } catch {
+      toast.error("Erreur lors de la confirmation");
+    }
   };
 
   if (loadError) {
@@ -397,6 +454,14 @@ export default function BLEditor() {
             </button>
             <span className="text-[13px] sm:text-[15px] font-bold text-navy truncate">Bon de Livraison</span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              {doc.id && (
+                <span className={`text-[10px] sm:text-[11px] font-semibold px-2 sm:px-3 py-1 rounded hidden sm:block ${
+                  doc.status === "DRAFT" ? "bg-gray-100 text-gray-600" :
+                  doc.status === "EMISE" ? "bg-navy/10 text-navy" :
+                  doc.status === "CANCELLED" ? "bg-red-100 text-red-700" :
+                  "bg-gray-100 text-gray-600"
+                }`}>{doc.status}</span>
+              )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
               <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
                 Nouveau
@@ -404,6 +469,11 @@ export default function BLEditor() {
               <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave}>
                 <Save className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Enregistrer</span>
               </Button>
+              {doc.id && doc.status === "DRAFT" && (
+                <button onClick={handleConfirm} className="bg-green-600 text-white border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-green-700 hidden md:block">
+                  Confirmer
+                </button>
+              )}
               <button onClick={() => handlePrint(1)} className="bg-navy text-white border-none px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy-l">
                 1 ex.
               </button>

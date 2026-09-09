@@ -3,6 +3,8 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { documentCreateSchema, documentUpdateSchema } from "@/lib/validation";
 import { createDocument, updateDocument, listDocuments, deleteDocument, getDocument } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
+import { canAccessDocument, canEditDocument, canDeleteDocument } from "@/lib/authorization";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,6 +17,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (id) {
+      if (!await canAccessDocument(user, id)) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      }
       const doc = await getDocument(id);
       if (!doc) return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
       return NextResponse.json(doc);
@@ -83,6 +88,17 @@ export async function PUT(request: NextRequest) {
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
 
+    if (!await canAccessDocument(user, id)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const existing = await prisma.document.findUnique({ where: { id }, select: { status: true } });
+    if (!existing) return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
+
+    if (!canEditDocument(existing.status)) {
+      return NextResponse.json({ error: "Ce document ne peut plus être modifié" }, { status: 403 });
+    }
+
     const body = await request.json();
     const parsed = documentUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -117,6 +133,17 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID requis" }, { status: 400 });
+
+    if (!await canAccessDocument(user, id)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const existing = await prisma.document.findUnique({ where: { id }, select: { status: true, num: true } });
+    if (!existing) return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
+
+    if (!canDeleteDocument(existing.status)) {
+      return NextResponse.json({ error: "Ce document ne peut plus être supprimé" }, { status: 403 });
+    }
 
     const doc = await deleteDocument(id);
 

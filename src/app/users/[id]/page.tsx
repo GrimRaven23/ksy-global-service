@@ -185,7 +185,7 @@ export default function UserDetailPage() {
                   </div>
                   <div>
                     <h2 className="text-base sm:text-lg font-bold text-navy dark:text-white">{targetUser.name}</h2>
-                    <p className="text-xs sm:text-sm text-txt2">{targetUser.email}</p>
+                    <p className="text-xs sm:text-sm text-txt2 dark:text-white/60">{targetUser.email}</p>
                     <div className="flex gap-2 mt-1">
                       <Badge color={roleColor(targetUser.role)}>{roleLabel(targetUser.role)}</Badge>
                       <Badge color={targetUser.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
@@ -195,7 +195,7 @@ export default function UserDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-txt2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-txt2 dark:text-white/60">
                   <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5" />
                     <span>Dernière connexion : {targetUser.lastLoginAt ? relativeTime(targetUser.lastLoginAt) : "Jamais"}</span>
@@ -271,7 +271,7 @@ export default function UserDetailPage() {
                       <div className="w-1.5 h-1.5 rounded-full bg-navy/30 mt-1.5 shrink-0" />
                       <div>
                         <span className="font-semibold text-navy dark:text-white">{e.action.replace(/_/g, " ").toLowerCase()}</span>
-                        <span className="text-txt2 ml-2">{relativeTime(e.createdAt)}</span>
+                        <span className="text-txt2 dark:text-white/60 ml-2">{relativeTime(e.createdAt)}</span>
                       </div>
                     </div>
                   ))}

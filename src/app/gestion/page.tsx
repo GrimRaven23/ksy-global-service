@@ -6,6 +6,7 @@ import { Building2, Users, ClipboardList, Shield, BarChart3, FileText, Truck } f
 import AppShell from "@/components/AppShell";
 import { Card, Badge, Skeleton, EmptyState, PageHeader } from "@/components/ui";
 import { roleLabel, relativeTime } from "@/lib/document-helpers";
+import { csrfFetch } from "@/lib/csrf";
 
 interface UserInfo {
   id: string;
@@ -81,10 +82,10 @@ export default function GestionPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/dashboard/stats").then((r) => r.json()).catch(() => null),
-      fetch("/api/users").then((r) => r.json()).catch(() => []),
-      fetch("/api/audit?limit=10").then((r) => r.json()).catch(() => ({ events: [] })),
+      csrfFetch("/api/auth/me").then((r) => r.json()),
+      csrfFetch("/api/dashboard/stats").then((r) => r.json()).catch(() => null),
+      csrfFetch("/api/users").then((r) => r.json()).catch(() => []),
+      csrfFetch("/api/audit?limit=10").then((r) => r.json()).catch(() => ({ events: [] })),
     ]).then(([me, st, users, audit]) => {
       if (!me.user) { router.push("/login"); return; }
       if (me.user.role !== "OWNER" && me.user.role !== "IT_ADMIN" && me.user.role !== "ADMIN") {
@@ -110,7 +111,7 @@ export default function GestionPage() {
       desc: "Nom, adresse, banque, TVA, identifiants officiels",
       icon: Building2,
       href: "/settings",
-      color: "bg-navy/5 text-navy",
+      color: "bg-navy/5 text-navy dark:bg-navy/10 dark:text-white",
       access: "Tous les rôles",
     },
     {
@@ -118,7 +119,7 @@ export default function GestionPage() {
       desc: "Créer, modifier, activer/désactiver les comptes",
       icon: Users,
       href: "/users",
-      color: "bg-blue-50 text-blue-600",
+      color: "bg-blue-50 text-blue-600 dark:bg-blue/10 dark:text-blue",
       access: "OWNER, IT_ADMIN, ADMIN",
     },
     {
@@ -126,7 +127,7 @@ export default function GestionPage() {
       desc: "Consultez toutes les actions effectuées dans le système",
       icon: ClipboardList,
       href: "/audit",
-      color: "bg-purple-50 text-purple-600",
+      color: "bg-purple-50 text-purple-600 dark:bg-purple/10 dark:text-purple",
       access: "OWNER, IT_ADMIN, ADMIN",
     },
     {
@@ -134,7 +135,7 @@ export default function GestionPage() {
       desc: "Gérer les factures et bons de livraison",
       icon: FileText,
       href: "/documents",
-      color: "bg-green-50 text-green-600",
+      color: "bg-green-50 text-green-600 dark:bg-green/10 dark:text-green",
       access: "Selon le rôle",
     },
     {
@@ -142,7 +143,7 @@ export default function GestionPage() {
       desc: "Vue d'ensemble des activités récentes",
       icon: BarChart3,
       href: "/",
-      color: "bg-amber-50 text-amber-600",
+      color: "bg-amber-50 text-amber-600 dark:bg-gold/10 dark:text-gold",
       access: "Tous les rôles",
     },
   ];
@@ -164,18 +165,18 @@ export default function GestionPage() {
             {stats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 {[
-                  { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy" },
-                  { label: "Utilisateurs", value: stats.totalUsers, icon: Users, color: "text-blue-600" },
-                  { label: "Livraisons", value: stats.totalDeliveryNotes, icon: Truck, color: "text-orange-600" },
-                  { label: "Revenus", value: `${new Intl.NumberFormat("fr-FR").format(stats.totalRevenue)} FCFA`, icon: BarChart3, color: "text-green-600" },
+                  { label: "Documents", value: stats.totalDocuments, icon: FileText, color: "text-navy dark:text-white" },
+                  { label: "Utilisateurs", value: stats.totalUsers, icon: Users, color: "text-blue-600 dark:text-blue" },
+                  { label: "Livraisons", value: stats.totalDeliveryNotes, icon: Truck, color: "text-orange-600 dark:text-gold" },
+                  { label: "Revenus", value: `${new Intl.NumberFormat("fr-FR").format(stats.totalRevenue)} FCFA`, icon: BarChart3, color: "text-green-600 dark:text-green" },
                 ].map((s) => (
                   <Card key={s.label} shadow className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center ${s.color}`}>
+                    <div className={`w-10 h-10 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center ${s.color}`}>
                       <s.icon className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm sm:text-lg font-bold text-navy dark:text-white truncate">{s.value}</p>
-                      <p className="text-[9px] sm:text-[10px] text-txt2 uppercase tracking-wide">{s.label}</p>
+                      <p className="text-[9px] sm:text-[10px] text-txt2 dark:text-white/50 uppercase tracking-wide">{s.label}</p>
                     </div>
                   </Card>
                 ))}
@@ -195,8 +196,8 @@ export default function GestionPage() {
                       <s.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
                     <h3 className="text-xs sm:text-sm font-bold text-navy dark:text-white mb-1">{s.title}</h3>
-                    <p className="text-[10px] sm:text-[11px] text-txt2 mb-2">{s.desc}</p>
-                    <p className="text-[9px] text-txt2/60 uppercase tracking-wide">{s.access}</p>
+                    <p className="text-[10px] sm:text-[11px] text-txt2 dark:text-white/60 mb-2">{s.desc}</p>
+                    <p className="text-[9px] text-txt2/60 dark:text-white/30 uppercase tracking-wide">{s.access}</p>
                   </button>
                 ))}
               </div>
@@ -204,7 +205,7 @@ export default function GestionPage() {
 
             <Card>
               <div className="flex items-center gap-2 mb-3">
-                <ClipboardList className="w-3 h-3 text-navy" />
+                <ClipboardList className="w-3 h-3 text-navy dark:text-white" />
                 <h2 className="text-[10px] font-bold uppercase tracking-wide text-navy dark:text-white">Activité récente</h2>
               </div>
               {recentAudit.length === 0 ? (
@@ -214,11 +215,11 @@ export default function GestionPage() {
                   {recentAudit.map((e) => (
                     <div key={e.id} className="flex items-center gap-2 sm:gap-3 py-1.5 border-b border-bdr/50 last:border-0">
                       <Badge color={auditActionColor(e.action)}>{auditActionLabel(e.action)}</Badge>
-                      <span className="text-[9px] sm:text-[10px] text-txt2 flex-1 truncate">
+                      <span className="text-[9px] sm:text-[10px] text-txt2 dark:text-white/60 flex-1 truncate">
                         {e.entityType}
                         {e.user ? ` • ${e.user.name}` : ""}
                       </span>
-                      <span className="text-[9px] sm:text-[10px] text-txt2 whitespace-nowrap">{relativeTime(e.createdAt)}</span>
+                      <span className="text-[9px] sm:text-[10px] text-txt2 dark:text-white/60 whitespace-nowrap">{relativeTime(e.createdAt)}</span>
                     </div>
                   ))}
                 </div>

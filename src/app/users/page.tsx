@@ -174,11 +174,11 @@ export default function UsersPage() {
                 <table className="w-full min-w-[500px]">
                   <thead>
                     <tr className="border-b border-bdr">
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Utilisateur</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Rôle</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Statut</th>
-                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2 hidden sm:table-cell">Dernière connexion</th>
-                      <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 uppercase tracking-wide pb-2">Actions</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 dark:text-white/50 uppercase tracking-wide pb-2">Utilisateur</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 dark:text-white/50 uppercase tracking-wide pb-2">Rôle</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 dark:text-white/50 uppercase tracking-wide pb-2">Statut</th>
+                      <th scope="col" className="text-left text-[10px] sm:text-[11px] font-semibold text-txt2 dark:text-white/50 uppercase tracking-wide pb-2 hidden sm:table-cell">Dernière connexion</th>
+                      <th scope="col" className="text-right text-[10px] sm:text-[11px] font-semibold text-txt2 dark:text-white/50 uppercase tracking-wide pb-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -189,7 +189,7 @@ export default function UsersPage() {
                             <Avatar name={u.name} size="sm" />
                             <div>
                               <p className="text-xs sm:text-sm font-semibold text-navy dark:text-white">{u.name}</p>
-                              <p className="text-[10px] sm:text-[11px] text-txt2">{u.email}</p>
+                              <p className="text-[10px] sm:text-[11px] text-txt2 dark:text-white/60">{u.email}</p>
                             </div>
                           </div>
                         </td>
@@ -199,7 +199,7 @@ export default function UsersPage() {
                             {u.status === "ACTIVE" ? "Actif" : "Désactivé"}
                           </Badge>
                         </td>
-                        <td className="py-2.5 text-xs text-txt2 hidden sm:table-cell">
+                        <td className="py-2.5 text-xs text-txt2 dark:text-white/60 hidden sm:table-cell">
                           {u.lastLoginAt ? relativeTime(u.lastLoginAt) : "Jamais"}
                         </td>
                         <td className="py-2.5 text-right" onClick={(e) => e.stopPropagation()}>

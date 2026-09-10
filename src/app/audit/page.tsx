@@ -6,6 +6,7 @@ import { Activity, ChevronDown, ChevronRight } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Card, Badge, SearchInput, Pagination, Avatar, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
 import { relativeTime } from "@/lib/document-helpers";
+import { csrfFetch } from "@/lib/csrf";
 
 interface AuditEvent {
   id: string;
@@ -68,7 +69,7 @@ export default function AuditPage() {
     const params = new URLSearchParams({ limit: String(limit), offset: String(page * limit) });
     if (entityType) params.set("entityType", entityType);
 
-    fetch(`/api/audit?${params}`)
+    csrfFetch(`/api/audit?${params}`)
       .then((r) => r.json())
       .then((data) => {
         setEvents(data.events || []);

@@ -125,17 +125,17 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <h2 className="text-base sm:text-lg font-bold text-navy dark:text-white">{user.name}</h2>
-                    <p className="text-xs sm:text-sm text-txt2">{user.email}</p>
+                    <p className="text-xs sm:text-sm text-txt2 dark:text-white/60">{user.email}</p>
                     <Badge color={roleColor(user.role)}>{roleLabel(user.role)}</Badge>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 text-xs text-txt2">
+                  <div className="flex items-center gap-2 text-xs text-txt2 dark:text-white/60">
                     <Clock className="w-3.5 h-3.5" />
                     <span>Dernière connexion : {user.lastLoginAt ? relativeTime(user.lastLoginAt) : "Jamais"}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-txt2">
+                  <div className="flex items-center gap-2 text-xs text-txt2 dark:text-white/60">
                     <Shield className="w-3.5 h-3.5" />
                     <span>Membre depuis : {relativeTime(user.createdAt)}</span>
                   </div>

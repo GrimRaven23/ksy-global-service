@@ -100,7 +100,8 @@ export default function DocumentsPage() {
       setDocs((prev) => prev.filter((d) => d.id !== id));
       toast.success("Document supprimé");
     } else {
-      toast.error("Erreur lors de la suppression");
+      const err = await res.json().catch(() => ({ error: "Erreur lors de la suppression" }));
+      toast.error(err.error || "Erreur lors de la suppression");
     }
   };
 

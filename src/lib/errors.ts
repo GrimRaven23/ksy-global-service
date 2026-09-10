@@ -52,11 +52,19 @@ export function isAppError(error: unknown): error is AppError {
 
 export function getStatusCode(error: unknown): number {
   if (isAppError(error)) return error.statusCode;
+  if (typeof error === "object" && error !== null && "statusCode" in error) {
+    const code = (error as { statusCode: unknown }).statusCode;
+    if (typeof code === "number" && code >= 100 && code < 600) return code;
+  }
   return 500;
 }
 
 export function getErrorMessage(error: unknown): string {
   if (isAppError(error)) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const msg = (error as { message: unknown }).message;
+    if (typeof msg === "string") return msg;
+  }
   if (error instanceof Error) {
     if (process.env.NODE_ENV === "production") return "Erreur serveur";
     return error.message;

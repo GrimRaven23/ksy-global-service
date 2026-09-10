@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit-edge";
 import { validateCsrf } from "@/lib/csrf";
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
@@ -118,10 +118,11 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === "/api/auth/login" && request.method === "POST") {
     const ip = getClientIp(request);
-    const { allowed, retryAfter } = await checkRateLimit(`login:${ip}`, 5, 10 * 60 * 1000);
+    const { allowed, retryAfter } = checkRateLimit(`login:${ip}`, 5, 10 * 60 * 1000);
     if (!allowed) {
       console.warn(`Rate limit exceeded for login from IP: ${ip}`);
-      const resp = rateLimitResponse(retryAfter);
+      const resp = NextResponse.json({ ok: false, error: "Trop de requêtes. Réessayez plus tard." }, { status: 429 });
+      resp.headers.set("Retry-After", Math.ceil(retryAfter).toString());
       addSecurityHeaders(resp, nonce);
       return resp;
     }
@@ -129,9 +130,10 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/") && !pathname.startsWith("/api/health")) {
     const ip = getClientIp(request);
-    const { allowed, retryAfter } = await checkRateLimit(`api:${ip}`, 100, 60 * 1000);
+    const { allowed, retryAfter } = checkRateLimit(`api:${ip}`, 100, 60 * 1000);
     if (!allowed) {
-      const resp = rateLimitResponse(retryAfter);
+      const resp = NextResponse.json({ ok: false, error: "Trop de requêtes. Réessayez plus tard." }, { status: 429 });
+      resp.headers.set("Retry-After", Math.ceil(retryAfter).toString());
       addSecurityHeaders(resp, nonce);
       return resp;
     }

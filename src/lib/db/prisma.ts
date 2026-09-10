@@ -4,8 +4,10 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
   const url = process.env.DATABASE_URL;
-  if (url && !url.includes("sslmode=")) {
-    process.env.DATABASE_URL = url + "&sslmode=require";
+  const isLocal = !!url && /localhost|127\.0\.0\.1/.test(url);
+  if (url && !url.includes("sslmode=") && !isLocal) {
+    const separator = url.includes("?") ? "&" : "?";
+    process.env.DATABASE_URL = `${url}${separator}sslmode=require`;
   }
 
   return new PrismaClient({

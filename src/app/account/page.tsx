@@ -124,7 +124,7 @@ export default function AccountPage() {
                     <span className="text-gold-lt font-bold text-lg sm:text-xl">{user.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</span>
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-bold text-navy">{user.name}</h2>
+                    <h2 className="text-base sm:text-lg font-bold text-navy dark:text-white">{user.name}</h2>
                     <p className="text-xs sm:text-sm text-txt2">{user.email}</p>
                     <Badge color={roleColor(user.role)}>{roleLabel(user.role)}</Badge>
                   </div>

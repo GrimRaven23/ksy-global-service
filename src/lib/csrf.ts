@@ -1,28 +1,20 @@
-import crypto from "crypto";
-
 const CSRF_COOKIE = "csrf_token";
 const CSRF_HEADER = "x-csrf-token";
-const CSRF_MAX_AGE = 60 * 60; // 1 hour
 
-export function generateCsrfToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
+export const CSRF_COOKIE_NAME = CSRF_COOKIE;
+export const CSRF_HEADER_NAME = CSRF_HEADER;
 
-export function getCsrfCookieName(): string {
-  return CSRF_COOKIE;
-}
-
-export function getCsrfHeaderName(): string {
-  return CSRF_HEADER;
-}
-
-export function getCsrfMaxAge(): number {
-  return CSRF_MAX_AGE;
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 export function validateCsrf(request: Request, cookies: { get: (name: string) => { value: string } | undefined }): boolean {
   const method = request.method.toUpperCase();
-
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     return true;
   }
@@ -34,11 +26,7 @@ export function validateCsrf(request: Request, cookies: { get: (name: string) =>
     return false;
   }
 
-  if (cookieToken.length !== headerToken.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
+  return constantTimeCompare(cookieToken, headerToken);
 }
 
 function readCookie(name: string): string | null {

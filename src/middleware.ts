@@ -64,46 +64,56 @@ async function verifySessionToken(token: string, secret: string): Promise<Record
   }
 }
 
-function addSecurityHeaders(response: NextResponse, nonce?: string): NextResponse {
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function addSecurityHeaders(response: NextResponse, nonce: string): NextResponse {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   response.headers.set("X-DNS-Prefetch-Control", "off");
 
   if (process.env.NODE_ENV === "production") {
     response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-    const cspDirectives = [
-      "default-src 'self'",
-      `script-src 'self'${nonce ? ` 'nonce-${nonce}'` : " 'unsafe-inline'"}`,
-      `style-src 'self'${nonce ? ` 'nonce-${nonce}'` : " 'unsafe-inline'"}`,
-      "img-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self'",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      "base-uri 'self'",
-      "upgrade-insecure-requests",
-    ];
-    response.headers.set("Content-Security-Policy", cspDirectives.join("; "));
   }
+
+  const cspDirectives = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'`,
+    `style-src 'self' 'unsafe-inline'`,
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "base-uri 'self'",
+  ];
+  if (process.env.NODE_ENV === "production") {
+    cspDirectives.push("upgrade-insecure-requests");
+  }
+  response.headers.set("Content-Security-Policy", cspDirectives.join("; "));
 
   return response;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const nonce = generateNonce();
 
   if (PUBLIC_STATIC.some((p) => pathname.startsWith(p)) || STATIC_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
-    return addSecurityHeaders(NextResponse.next());
+    const resp = NextResponse.next();
+    addSecurityHeaders(resp, nonce);
+    resp.headers.set("X-Nonce", nonce);
+    return resp;
   }
 
   if (!SESSION_SECRET) {
     console.error("FATAL: SESSION_SECRET not configured");
-    if (process.env.NODE_ENV === "production") {
-      return new NextResponse("Server configuration error", { status: 503 });
-    }
+    return new NextResponse("Server configuration error", { status: 503 });
   }
 
   if (pathname === "/api/auth/login" && request.method === "POST") {
@@ -111,7 +121,9 @@ export async function middleware(request: NextRequest) {
     const { allowed, retryAfter } = await checkRateLimit(`login:${ip}`, 5, 10 * 60 * 1000);
     if (!allowed) {
       console.warn(`Rate limit exceeded for login from IP: ${ip}`);
-      return rateLimitResponse(retryAfter);
+      const resp = rateLimitResponse(retryAfter);
+      addSecurityHeaders(resp, nonce);
+      return resp;
     }
   }
 
@@ -119,41 +131,55 @@ export async function middleware(request: NextRequest) {
     const ip = getClientIp(request);
     const { allowed, retryAfter } = await checkRateLimit(`api:${ip}`, 100, 60 * 1000);
     if (!allowed) {
-      return rateLimitResponse(retryAfter);
+      const resp = rateLimitResponse(retryAfter);
+      addSecurityHeaders(resp, nonce);
+      return resp;
     }
   }
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return addSecurityHeaders(NextResponse.next());
+    const modifiedHeaders = new Headers(request.headers);
+    modifiedHeaders.set("X-Nonce", nonce);
+    const resp = NextResponse.next({ request: { headers: modifiedHeaders } });
+    addSecurityHeaders(resp, nonce);
+    return resp;
   }
 
   const token = request.cookies.get("session")?.value;
   if (!token) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ ok: false, error: "Non authentifié" }, { status: 401 });
+      const resp = NextResponse.json({ ok: false, error: "Non authentifié" }, { status: 401 });
+      addSecurityHeaders(resp, nonce);
+      return resp;
     }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return addSecurityHeaders(NextResponse.redirect(url), nonce);
   }
 
   const payload = await verifySessionToken(token, SESSION_SECRET);
   if (!payload) {
     if (pathname.startsWith("/api/")) {
-      const response = NextResponse.json({ ok: false, error: "Session expirée" }, { status: 401 });
-      response.cookies.delete("session");
-      return response;
+      const resp = NextResponse.json({ ok: false, error: "Session expirée" }, { status: 401 });
+      resp.cookies.delete("session");
+      resp.cookies.delete("csrf_token");
+      addSecurityHeaders(resp, nonce);
+      return resp;
     }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    const response = NextResponse.redirect(url);
-    response.cookies.delete("session");
-    return response;
+    const resp = NextResponse.redirect(url);
+    resp.cookies.delete("session");
+    resp.cookies.delete("csrf_token");
+    addSecurityHeaders(resp, nonce);
+    return resp;
   }
 
   if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/")) {
     if (!validateCsrf(request, request.cookies)) {
-      return NextResponse.json({ ok: false, error: "Token CSRF invalide" }, { status: 403 });
+      const resp = NextResponse.json({ ok: false, error: "Token CSRF invalide — rechargez la page" }, { status: 403 });
+      addSecurityHeaders(resp, nonce);
+      return resp;
     }
   }
 
@@ -161,16 +187,21 @@ export async function middleware(request: NextRequest) {
     const allowed = ["/change-password", "/api/auth/change-password", "/api/auth/logout"];
     if (!allowed.some((p) => pathname.startsWith(p))) {
       if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ ok: false, error: "Changement de mot de passe requis" }, { status: 403 });
+        const resp = NextResponse.json({ ok: false, error: "Changement de mot de passe requis" }, { status: 403 });
+        addSecurityHeaders(resp, nonce);
+        return resp;
       }
       const url = request.nextUrl.clone();
       url.pathname = "/change-password";
-      return NextResponse.redirect(url);
+      return addSecurityHeaders(NextResponse.redirect(url), nonce);
     }
   }
 
-  const response = NextResponse.next();
-  return addSecurityHeaders(response);
+  const modifiedHeaders = new Headers(request.headers);
+  modifiedHeaders.set("X-Nonce", nonce);
+  const resp = NextResponse.next({ request: { headers: modifiedHeaders } });
+  addSecurityHeaders(resp, nonce);
+  return resp;
 }
 
 export const config = {

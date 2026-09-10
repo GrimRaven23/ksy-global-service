@@ -273,7 +273,7 @@ export function Avatar({
   };
 
   return (
-    <div className={`${sizes[size]} rounded-full bg-navy/8 text-navy font-bold flex items-center justify-center shrink-0 ring-2 ring-white dark:ring-surface ${className}`}>
+    <div className={`${sizes[size]} rounded-full bg-navy/8 dark:bg-navy/20 text-navy dark:text-white font-bold flex items-center justify-center shrink-0 ring-2 ring-white dark:ring-surface ${className}`}>
       {initials}
     </div>
   );
@@ -379,6 +379,7 @@ export function Toggle({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label || "Basculer"}
         onClick={() => onChange(!checked)}
         className={`relative w-10 h-[22px] rounded-full transition-colors ${checked ? "bg-navy" : "bg-gray-300 dark:bg-gray-600"}`}
       >
@@ -408,13 +409,13 @@ export function PageHeader({
           {(backHref || onBack) && (
             <button
               onClick={onBack || (() => window.history.back())}
-              className="p-1.5 -ml-1.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer shrink-0"
+              className="p-1.5 -ml-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer shrink-0"
               aria-label="Retour"
             >
-              <ArrowLeft className="w-4 h-4 text-navy" />
+              <ArrowLeft className="w-4 h-4 text-navy dark:text-white" />
             </button>
           )}
-          <h1 className="text-sm sm:text-base font-bold text-navy truncate">{title}</h1>
+          <h1 className="text-sm sm:text-base font-bold text-navy dark:text-white truncate">{title}</h1>
         </div>
         {children && <div className="flex items-center gap-2 shrink-0">{children}</div>}
       </div>

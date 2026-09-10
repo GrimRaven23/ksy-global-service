@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function checkRateLimit(
@@ -54,12 +55,11 @@ export function getClientIp(request: Request): string {
 }
 
 export function rateLimitResponse(retryAfter: number) {
-  return new Response(
-    JSON.stringify({ ok: false, error: "Trop de requêtes. Réessayez plus tard." }),
+  return NextResponse.json(
+    { ok: false, error: "Trop de requêtes. Réessayez plus tard." },
     {
       status: 429,
       headers: {
-        "Content-Type": "application/json",
         "Retry-After": Math.ceil(retryAfter).toString(),
         "X-RateLimit-Limited": "true",
       },

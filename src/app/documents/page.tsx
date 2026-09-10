@@ -130,7 +130,7 @@ export default function DocumentsPage() {
   return (
     <AppShell>
       <PageHeader title="Tous les documents" backHref="/">
-        <Badge color="bg-navy/10 text-navy">{docs.length}</Badge>
+        <Badge color="bg-navy/10 text-navy dark:bg-navy/20 dark:text-white">{docs.length}</Badge>
       </PageHeader>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-4">
@@ -195,7 +195,7 @@ export default function DocumentsPage() {
                     <tbody>
                       {filtered.map((d) => (
                         <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
-                          <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
+                          <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy dark:text-white cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
                           <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
                           <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{relativeTime(d.createdAt)}</td>
                           <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{d.customerName || "—"}</td>
@@ -211,7 +211,7 @@ export default function DocumentsPage() {
                           </td>
                           <td className="py-2.5 text-[11px] hidden lg:table-cell">
                             {d.deliveryNotes && d.deliveryNotes.length > 0 ? (
-                              <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy font-semibold hover:underline cursor-pointer">
+                              <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-navy dark:text-white font-semibold hover:underline cursor-pointer">
                                 {d.deliveryNotes![0].num}
                               </button>
                             ) : d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" ? (
@@ -224,7 +224,7 @@ export default function DocumentsPage() {
                           </td>
                           <td className="py-2.5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => openDoc(d)} className="text-[11px] sm:text-xs text-navy font-semibold hover:underline cursor-pointer">Ouvrir</button>
+                              <button onClick={() => openDoc(d)} className="text-[11px] sm:text-xs text-navy dark:text-white font-semibold hover:underline cursor-pointer">Ouvrir</button>
                               <button onClick={() => handleDelete(d.id, d.type)} className="p-2 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -245,7 +245,7 @@ export default function DocumentsPage() {
                     >
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <div className="min-w-0">
-                          <button onClick={() => openDoc(d)} className="text-xs font-bold text-navy hover:underline cursor-pointer text-left">{d.num}</button>
+                           <button onClick={() => openDoc(d)} className="text-xs font-bold text-navy dark:text-white hover:underline cursor-pointer text-left">{d.num}</button>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge>
                             <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
@@ -260,7 +260,7 @@ export default function DocumentsPage() {
                       )}
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] text-txt2">{relativeTime(d.createdAt)}</span>
-                        <span className="text-xs font-bold text-navy">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</span>
+                         <span className="text-xs font-bold text-navy dark:text-white">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</span>
                       </div>
                       {d.convertedFrom && (
                         <p className="text-[9px] text-purple-600 mt-1">de {d.convertedFrom.num}</p>
@@ -274,7 +274,7 @@ export default function DocumentsPage() {
                         </button>
                       )}
                       {d.deliveryNotes && d.deliveryNotes.length > 0 && (
-                        <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-[11px] text-navy font-semibold hover:underline cursor-pointer mt-1">
+                         <button onClick={() => router.push(`/bl?id=${d.deliveryNotes![0].id}`)} className="text-[11px] text-navy dark:text-white font-semibold hover:underline cursor-pointer mt-1">
                           BL: {d.deliveryNotes[0].num}
                         </button>
                       )}

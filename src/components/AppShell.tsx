@@ -121,7 +121,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
               <span className="text-gold-lt font-bold text-xs">KSY</span>
             </div>
             <div className="hidden lg:block">
-              <h1 className="text-sm font-bold text-navy leading-tight group-hover:text-navy-l transition-colors">KSY GLOBAL SERVICE</h1>
+              <h1 className="text-sm font-bold text-navy dark:text-white leading-tight group-hover:text-navy-l transition-colors">KSY GLOBAL SERVICE</h1>
               <p className="text-[9px] text-txt3 leading-tight">KNOWLEDGE • SERVICE • YIELD</p>
             </div>
           </button>
@@ -135,7 +135,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   isActive(item.href)
                     ? "bg-navy text-white shadow-sm"
-                    : "text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-navy"
+                    : "text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-navy dark:hover:text-white"
                 }`}
               >
                 {item.label}
@@ -195,7 +195,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
             >
               <Avatar name={user.name} size="sm" />
               <div className="text-right hidden lg:block">
-                <p className="text-xs font-semibold text-navy leading-tight">{greeting()}, {user.name.split(" ")[0]}</p>
+                <p className="text-xs font-semibold text-navy dark:text-white leading-tight">{greeting()}, {user.name.split(" ")[0]}</p>
                 <p className="text-[9px] text-txt3 leading-tight">{roleLabel(user.role)}</p>
               </div>
             </button>
@@ -218,7 +218,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
             <div className="w-7 h-7 rounded-lg gradient-navy flex items-center justify-center shrink-0 shadow-sm">
               <span className="text-gold-lt font-bold text-[10px]">KSY</span>
             </div>
-            <span className="text-xs font-bold text-navy">KSY GLOBAL SERVICE</span>
+            <span className="text-xs font-bold text-navy dark:text-white">KSY GLOBAL SERVICE</span>
           </button>
           <div className="flex items-center gap-1">
             <button
@@ -241,7 +241,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
               className="p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
               aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
             >
-              {mobileMenuOpen ? <X className="w-5 h-5 text-navy" /> : <Menu className="w-5 h-5 text-navy" />}
+              {mobileMenuOpen ? <X className="w-5 h-5 text-navy dark:text-white" /> : <Menu className="w-5 h-5 text-navy dark:text-white" />}
             </button>
           </div>
         </div>
@@ -328,7 +328,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
           <button
             onClick={() => router.push("/")}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/") ? "text-navy" : "text-txt3"
+              isActive("/") ? "text-navy dark:text-white" : "text-txt3"
             }`}
           >
             <LayoutDashboard className="w-5 h-5" />
@@ -337,7 +337,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
           <button
             onClick={() => router.push("/documents")}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/documents") ? "text-navy" : "text-txt3"
+              isActive("/documents") ? "text-navy dark:text-white" : "text-txt3"
             }`}
           >
             <FileText className="w-5 h-5" />
@@ -357,7 +357,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
           <button
             onClick={() => router.push(visibleAdmin.length > 0 ? visibleAdmin[0].href : "/settings")}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/settings") || isActive("/gestion") || isActive("/users") || isActive("/audit") ? "text-navy" : "text-txt3"
+              isActive("/settings") || isActive("/gestion") || isActive("/users") || isActive("/audit") ? "text-navy dark:text-white" : "text-txt3"
             }`}
           >
             <Settings className="w-5 h-5" />
@@ -366,7 +366,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
           <button
             onClick={() => router.push("/account")}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/account") ? "text-navy" : "text-txt3"
+              isActive("/account") ? "text-navy dark:text-white" : "text-txt3"
             }`}
           >
             <User className="w-5 h-5" />

@@ -184,7 +184,7 @@ export default function UserDetailPage() {
                     <span className="text-gold-lt font-bold text-lg sm:text-xl">{targetUser.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}</span>
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-bold text-navy">{targetUser.name}</h2>
+                    <h2 className="text-base sm:text-lg font-bold text-navy dark:text-white">{targetUser.name}</h2>
                     <p className="text-xs sm:text-sm text-txt2">{targetUser.email}</p>
                     <div className="flex gap-2 mt-1">
                       <Badge color={roleColor(targetUser.role)}>{roleLabel(targetUser.role)}</Badge>
@@ -235,7 +235,7 @@ export default function UserDetailPage() {
                     {showResetPassword && tempPassword && (
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs flex-1">
                         <p className="font-semibold text-yellow-800 mb-1">Nouveau mot de passe temporaire :</p>
-                        <code className="bg-white px-2 py-1 rounded border font-mono text-sm">{tempPassword}</code>
+                        <code className="bg-white dark:bg-white/10 px-2 py-1 rounded border font-mono text-sm">{tempPassword}</code>
                         <p className="text-yellow-700 mt-1">Communiquez ce mot de passe {"à"} l&apos;utilisateur. Il devra le changer {"à"} sa prochaine connexion.</p>
                       </div>
                     )}
@@ -270,7 +270,7 @@ export default function UserDetailPage() {
                     <div key={e.id} className="flex items-start gap-2 text-xs">
                       <div className="w-1.5 h-1.5 rounded-full bg-navy/30 mt-1.5 shrink-0" />
                       <div>
-                        <span className="font-semibold text-navy">{e.action.replace(/_/g, " ").toLowerCase()}</span>
+                        <span className="font-semibold text-navy dark:text-white">{e.action.replace(/_/g, " ").toLowerCase()}</span>
                         <span className="text-txt2 ml-2">{relativeTime(e.createdAt)}</span>
                       </div>
                     </div>

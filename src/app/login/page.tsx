@@ -26,7 +26,8 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.ok) {
-        if (data.mustChangePassword) {
+        const userData = data.data || data;
+        if (userData.mustChangePassword) {
           router.push("/change-password");
         } else {
           router.push("/");

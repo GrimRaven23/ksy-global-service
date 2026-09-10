@@ -26,7 +26,7 @@ const actionColors: Record<string, string> = {
   ROLE_CHANGED: "bg-purple-100 text-purple-700",
   DOCUMENT_CREATED: "bg-green-100 text-green-700",
   DOCUMENT_UPDATED: "bg-blue-100 text-blue-700",
-  DOCUMENT_FINALIZED: "bg-navy/10 text-navy",
+  DOCUMENT_FINALIZED: "bg-navy/10 text-navy dark:bg-navy/20 dark:text-white",
   DOCUMENT_DELETED: "bg-red-100 text-red-600",
   DELIVERY_NOTE_CREATED: "bg-green-100 text-green-700",
   DELIVERY_NOTE_UPDATED: "bg-blue-100 text-blue-700",
@@ -88,7 +88,7 @@ export default function AuditPage() {
   return (
     <AppShell>
       <PageHeader title="Journal d'audit" backHref="/">
-        <Badge color="bg-navy/10 text-navy">{total}</Badge>
+        <Badge color="bg-navy/10 text-navy dark:bg-navy/20 dark:text-white">{total}</Badge>
       </PageHeader>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-5 lg:px-6 py-4 sm:py-6 space-y-4">
@@ -104,7 +104,7 @@ export default function AuditPage() {
               key={et.value}
               onClick={() => { setEntityType(et.value); setPage(0); }}
               className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer min-h-[32px] ${
-                entityType === et.value ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
+                entityType === et.value ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30 dark:bg-surface dark:text-white"
               }`}
             >
               {et.label}

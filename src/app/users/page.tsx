@@ -107,7 +107,7 @@ export default function UsersPage() {
   return (
     <AppShell>
       <PageHeader title="Gestion des utilisateurs" backHref="/">
-        <Badge color="bg-navy/10 text-navy">{users.length}</Badge>
+        <Badge color="bg-navy/10 text-navy dark:bg-navy/20 dark:text-white">{users.length}</Badge>
         <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)}>
           {showForm ? <><X className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Annuler</span></> : <><UserPlus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Nouvel utilisateur</span></>}
         </Button>
@@ -155,7 +155,7 @@ export default function UsersPage() {
               key={r}
               onClick={() => setRoleFilter(r)}
               className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer min-h-[32px] ${
-                roleFilter === r ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30"
+                roleFilter === r ? "bg-navy text-white border-navy" : "bg-white text-navy border-bdr hover:border-navy/30 dark:bg-surface dark:text-white"
               }`}
             >
               {r === "ALL" ? "Tous" : roleLabel(r)}
@@ -188,7 +188,7 @@ export default function UsersPage() {
                           <div className="flex items-center gap-2">
                             <Avatar name={u.name} size="sm" />
                             <div>
-                              <p className="text-xs sm:text-sm font-semibold text-navy">{u.name}</p>
+                              <p className="text-xs sm:text-sm font-semibold text-navy dark:text-white">{u.name}</p>
                               <p className="text-[10px] sm:text-[11px] text-txt2">{u.email}</p>
                             </div>
                           </div>

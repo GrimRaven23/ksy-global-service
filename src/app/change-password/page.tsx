@@ -58,13 +58,13 @@ export default function ChangePasswordPage() {
           <div className="w-20 h-20 rounded-2xl bg-navy mx-auto mb-4 flex items-center justify-center shadow-lg shadow-navy/20">
             <span className="text-gold-lt font-bold text-2xl">KSY</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-navy">Changer le mot de passe</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-navy dark:text-white">Changer le mot de passe</h1>
           <p className="text-xs text-txt2 mt-1 tracking-wide">
             Vous devez changer votre mot de passe pour continuer
           </p>
         </div>
 
-        <div className="bg-white border border-bdr rounded-xl p-6 sm:p-7 shadow-sm animate-slide-up">
+        <div className="bg-white border border-bdr rounded-xl dark:bg-surface p-6 sm:p-7 shadow-sm animate-slide-up">
           <div className="mb-4 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>Pour des raisons de sécurité, vous devez définir un nouveau mot de passe.</span>

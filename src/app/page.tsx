@@ -53,30 +53,29 @@ export default function Home() {
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me").then((r) => r.json()),
-      fetch("/api/dashboard/stats").then((r) => r.ok ? r.json() : { totalDocuments: 0, totalRevenue: 0, documentsThisMonth: 0, totalDeliveryNotes: 0 }).catch(() => ({ totalDocuments: 0, totalRevenue: 0, documentsThisMonth: 0, totalDeliveryNotes: 0 })),
-      fetch("/api/documents").then((r) => r.ok ? r.json() : []).catch(() => []),
-      fetch("/api/delivery").then((r) => r.ok ? r.json() : []).catch(() => []),
-      fetch("/api/audit?limit=5").then((r) => r.ok ? r.json() : { events: [] }).catch(() => ({ events: [] })),
+      fetch("/api/dashboard").then((r) => r.ok ? r.json() : null).catch(() => null),
     ])
-      .then(([me, st, docs, bl, audit]) => {
+      .then(([me, dash]) => {
         if (!me.user) { router.push("/login"); return; }
         setUser(me.user);
-        setStats(st);
-        const docsArr = (Array.isArray(docs) ? docs : (docs?.items || [])).map((d: Record<string, unknown>) => ({
-          id: String(d.id), num: String(d.num), type: String(d.type), date: String(d.date),
-          total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
-          customerName: String(d.customerName || ""),
-        }));
-        const blArr = (Array.isArray(bl) ? bl : (bl?.items || [])).map((d: Record<string, unknown>) => ({
-          id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
-          total: 0, status: String(d.status), createdAt: String(d.createdAt),
-          customerName: String(d.customerName || ""),
-        }));
-        const all = [...docsArr, ...blArr]
-          .sort((a: Doc, b: Doc) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 8);
-        setRecentDocs(all);
-        setActivity(audit.events || []);
+        if (dash) {
+          setStats(dash.stats);
+          const docsArr = (Array.isArray(dash.recentDocs) ? dash.recentDocs : []).map((d: Record<string, unknown>) => ({
+            id: String(d.id), num: String(d.num), type: String(d.type), date: String(d.date),
+            total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
+            customerName: String(d.customerName || ""),
+          }));
+          const blArr = (Array.isArray(dash.recentDeliveries) ? dash.recentDeliveries : []).map((d: Record<string, unknown>) => ({
+            id: String(d.id), num: String(d.num), type: "BL", date: String(d.date),
+            total: 0, status: String(d.status), createdAt: String(d.createdAt),
+            customerName: String(d.customerName || ""),
+          }));
+          const all = [...docsArr, ...blArr]
+            .sort((a: Doc, b: Doc) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 8);
+          setRecentDocs(all);
+          setActivity(dash.recentActivity || []);
+        }
         setLoading(false);
       })
       .catch(() => { router.push("/login"); });

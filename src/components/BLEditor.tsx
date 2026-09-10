@@ -308,12 +308,12 @@ export default function BLEditor() {
       <AppShell hideNav>
         <main className="no-print">
           <div className="max-w-[600px] mx-auto mt-20 px-5 text-center">
-          <div className="bg-white border border-red-200 rounded-xl p-8">
+          <div className="bg-white dark:bg-surface border border-red-200 rounded-xl p-8">
             <div className="text-red-500 text-4xl mb-4">⚠</div>
             <h2 className="text-sm font-bold text-red-700 mb-2">Erreur de chargement</h2>
             <p className="text-xs text-txt2 mb-4">{loadError}</p>
             <div className="flex gap-2 justify-center">
-              <button onClick={() => router.push("/")} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
+              <button onClick={() => router.push("/")} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
                 Retour au tableau de bord
               </button>
               <button onClick={() => window.location.reload()} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
@@ -462,10 +462,10 @@ export default function BLEditor() {
       <main className="no-print">
         <nav className="sticky top-0 z-50 bg-bg border-b border-bdr">
           <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 py-2.5 flex items-center justify-between gap-2">
-            <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-2 py-1.5 rounded hover:bg-navy/5 shrink-0">
+            <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy dark:text-white text-[13px] font-semibold cursor-pointer px-2 py-1.5 rounded hover:bg-navy/5 shrink-0">
               &#8592; <span className="hidden sm:inline">Retour</span>
             </button>
-            <span className="text-[13px] sm:text-[15px] font-bold text-navy truncate">Bon de Livraison</span>
+            <span className="text-[13px] sm:text-[15px] font-bold text-navy dark:text-white truncate">Bon de Livraison</span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               {doc.id && (
                 <span className={`text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1 rounded-full hidden sm:block ${
@@ -481,7 +481,7 @@ export default function BLEditor() {
                 }</span>
               )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
-              <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
+              <button onClick={handleNew} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
                 Nouveau
               </button>
               <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave} disabled={!isDraft}>
@@ -515,7 +515,7 @@ export default function BLEditor() {
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 py-4 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <div className="flex flex-col gap-3.5">
             {/* Delivery info */}
-            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
+            <section className="bg-white dark:bg-surface border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Informations de livraison</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="N° du bon" value={doc.num} placeholder="BL-2026-001" onChange={(v) => updateField("num", v)} disabled={!isDraft} />
@@ -528,7 +528,7 @@ export default function BLEditor() {
             </section>
 
             {/* Driver */}
-            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
+            <section className="bg-white dark:bg-surface border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Livreur</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Nom du livreur" value={doc.driver} placeholder="Nom du livreur" onChange={(v) => updateField("driver", v)} disabled={!isDraft} />
@@ -537,7 +537,7 @@ export default function BLEditor() {
             </section>
 
             {/* Client */}
-            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
+            <section className="bg-white dark:bg-surface border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Client / Destinataire</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} disabled={!isDraft} />
@@ -550,7 +550,7 @@ export default function BLEditor() {
             </section>
 
             {/* Products */}
-            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
+            <section className="bg-white dark:bg-surface border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Articles livrés</SectionTitle>
               <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 mb-2">
                 <table className="w-full border-collapse text-[11px] min-w-[450px]">
@@ -566,15 +566,15 @@ export default function BLEditor() {
                   <tbody>
                     {doc.products.map((p, i) => (
                       <tr key={i} className="border-b border-bdr/50">
-                        <td className="text-center py-1.5 px-1.5 font-semibold text-navy">{i + 1}</td>
+                        <td className="text-center py-1.5 px-1.5 font-semibold text-navy dark:text-white">{i + 1}</td>
                         <td className="py-1.5 px-1.5">
-                          <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] disabled:opacity-50" />
+                          <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" disabled={!isDraft} className="w-full px-1.5 py-1 bg-white dark:bg-surface border border-bdr rounded text-[11px] disabled:opacity-50" />
                         </td>
                         <td className="py-1.5 px-1.5">
-                          <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
+                          <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 bg-white dark:bg-surface border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
                         </td>
                         <td className="py-1.5 px-1.5">
-                          <input type="text" value={p.observation} onChange={(e) => updateProduct(i, "observation", e.target.value)} placeholder="Observation" disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] disabled:opacity-50" />
+                          <input type="text" value={p.observation} onChange={(e) => updateProduct(i, "observation", e.target.value)} placeholder="Observation" disabled={!isDraft} className="w-full px-1.5 py-1 bg-white dark:bg-surface border border-bdr rounded text-[11px] disabled:opacity-50" />
                         </td>
                         <td className="py-1.5 px-1.5">
                           <button onClick={() => removeProduct(i)} disabled={!isDraft} className="bg-transparent border-none text-red cursor-pointer text-base p-0.5 rounded hover:bg-red/10 disabled:opacity-30 disabled:cursor-not-allowed" title="Supprimer">
@@ -586,13 +586,13 @@ export default function BLEditor() {
                   </tbody>
                 </table>
               </div>
-              <button onClick={addProduct} disabled={!isDraft} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-navy">
+              <button onClick={addProduct} disabled={!isDraft} className="bg-white dark:bg-surface text-navy dark:text-white border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-navy">
                 + Ajouter un article
               </button>
             </section>
 
             {/* Observations */}
-            <section className="bg-white border border-bdr rounded-xl p-4 sm:p-5">
+            <section className="bg-white dark:bg-surface border border-bdr rounded-xl p-4 sm:p-5">
               <SectionTitle>Observations / Reserves du client</SectionTitle>
               <textarea
                 value={doc.observations}
@@ -600,7 +600,7 @@ export default function BLEditor() {
                 rows={4}
                 placeholder="Ex : Articles endommagés, quantité manquante, etc."
                 disabled={!isDraft}
-                className="w-full px-3 py-2.5 border border-bdr rounded text-xs resize-y min-h-[60px] focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-50"
+                className="w-full px-3 py-2.5 bg-white dark:bg-surface border border-bdr rounded text-xs resize-y min-h-[60px] focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-50"
               />
             </section>
           </div>
@@ -608,7 +608,7 @@ export default function BLEditor() {
           {/* Preview panel */}
           <div className="lg:sticky lg:top-[70px]">
             <div className="text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-1.5">Aperçu du document</div>
-            <div className="bg-white border border-bdr rounded shadow-md overflow-hidden">
+            <div className="bg-white dark:bg-surface border border-bdr rounded shadow-md overflow-hidden">
               {renderCopy("EXEMPLAIRE 1 — CLIENT / DESTINATAIRE")}
             </div>
           </div>

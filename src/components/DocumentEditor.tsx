@@ -408,12 +408,12 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
       <AppShell hideNav>
         <main className="no-print">
           <div className="max-w-[600px] mx-auto mt-20 px-5 text-center">
-          <div className="bg-white border border-red-200 rounded-xl p-8">
+          <div className="bg-white dark:bg-surface border border-red-200 rounded-xl p-8">
             <div className="text-red-500 text-4xl mb-4">⚠</div>
             <h2 className="text-sm font-bold text-red-700 mb-2">Erreur de chargement</h2>
             <p className="text-xs text-txt2 mb-4">{loadError}</p>
             <div className="flex gap-2 justify-center">
-              <button onClick={() => router.push("/")} className="bg-white text-navy border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
+              <button onClick={() => router.push("/")} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy/5">
                 Retour au tableau de bord
               </button>
               <button onClick={() => window.location.reload()} className="bg-navy text-white border-none px-4 py-2 rounded-md text-xs font-semibold cursor-pointer hover:bg-navy-l">
@@ -435,10 +435,10 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
         {/* Sticky action bar */}
         <nav className="sticky top-0 z-50 bg-bg border-b border-bdr">
           <div className="max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 py-2.5 flex items-center justify-between gap-2">
-            <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy text-[13px] font-semibold cursor-pointer px-2 py-1.5 rounded hover:bg-navy/5 shrink-0">
+            <button onClick={() => router.push("/")} className="bg-transparent border-none text-navy dark:text-white text-[13px] font-semibold cursor-pointer px-2 py-1.5 rounded hover:bg-navy/5 shrink-0">
               &#8592; <span className="hidden sm:inline">Retour</span>
             </button>
-            <span className="text-[13px] sm:text-[15px] font-bold text-navy truncate">
+            <span className="text-[13px] sm:text-[15px] font-bold text-navy dark:text-white truncate">
               {isPF ? "Facture Pro Forma" : "Facture Définitive"}
             </span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
@@ -458,7 +458,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                 }</span>
               )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
-              <button onClick={handleNew} className="bg-white text-navy border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
+              <button onClick={handleNew} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
                 Nouvelle
               </button>
               <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave} disabled={!isDraft}>
@@ -530,7 +530,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                       value={doc.saleMode}
                       onChange={(e) => updateField("saleMode", e.target.value)}
                       disabled={!isDraft}
-                      className="w-full px-2.5 py-2 border border-bdr rounded text-xs focus:outline-none focus:border-navy disabled:opacity-50"
+                      className="w-full px-2.5 py-2 bg-white dark:bg-surface border border-bdr rounded text-xs focus:outline-none focus:border-navy disabled:opacity-50"
                     >
                       <option value="directe">Vente directe</option>
                       <option value="livraison">Livraison</option>
@@ -575,7 +575,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
 
               {doc.tvaOn && (
                 <div className="flex items-center gap-2 mb-2.5 px-3 py-2 bg-gold-bg border border-gold rounded text-xs">
-                  <label className="font-semibold text-navy whitespace-nowrap">Taux TVA (%)</label>
+                  <label className="font-semibold text-navy dark:text-white whitespace-nowrap">Taux TVA (%)</label>
                   <input
                     type="number"
                     value={doc.tvaRate}
@@ -583,7 +583,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                     max={100}
                     onChange={(e) => updateField("tvaRate", parseFloat(e.target.value) || 18)}
                     disabled={!isDraft}
-                    className="w-16 px-2 py-1 border border-gold rounded text-xs text-center disabled:opacity-50"
+                    className="w-16 px-2 py-1 bg-white dark:bg-surface border border-gold rounded text-xs text-center disabled:opacity-50"
                   />
                 </div>
               )}
@@ -607,17 +607,17 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                       const lineTotal = q * pr;
                       return (
                         <tr key={i} className="border-b border-bdr/50">
-                          <td className="text-center py-1.5 px-1.5 font-semibold text-navy">{i + 1}</td>
+                          <td className="text-center py-1.5 px-1.5 font-semibold text-navy dark:text-white">{i + 1}</td>
                           <td className="py-1.5 px-1.5">
-                            <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] disabled:opacity-50" />
+                            <input type="text" value={p.designation} onChange={(e) => updateProduct(i, "designation", e.target.value)} placeholder="Désignation" disabled={!isDraft} className="w-full px-1.5 py-1 bg-white dark:bg-surface border border-bdr rounded text-[11px] disabled:opacity-50" />
                           </td>
                           <td className="py-1.5 px-1.5">
-                            <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
+                            <input type="number" value={p.quantity} min={0} onChange={(e) => updateProduct(i, "quantity", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 bg-white dark:bg-surface border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
                           </td>
                           <td className="py-1.5 px-1.5">
-                            <input type="number" value={p.price} min={0} onChange={(e) => updateProduct(i, "price", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
+                            <input type="number" value={p.price} min={0} onChange={(e) => updateProduct(i, "price", e.target.value)} disabled={!isDraft} className="w-full px-1.5 py-1 bg-white dark:bg-surface border border-bdr rounded text-[11px] text-right disabled:opacity-50" />
                           </td>
-                          <td className="text-right py-1.5 px-1.5 font-semibold text-navy whitespace-nowrap">
+                          <td className="text-right py-1.5 px-1.5 font-semibold text-navy dark:text-white whitespace-nowrap">
                             {fmtNum(lineTotal)} F
                           </td>
                           <td className="py-1.5 px-1.5">
@@ -636,7 +636,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                   </tbody>
                 </table>
               </div>
-              <button onClick={addProduct} disabled={!isDraft} className="bg-white text-navy border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-navy">
+              <button onClick={addProduct} disabled={!isDraft} className="bg-white dark:bg-surface text-navy dark:text-white border-2 border-dashed border-navy px-4 py-2 rounded-md cursor-pointer text-[11px] font-semibold hover:bg-navy hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-navy">
                 + Ajouter un produit
               </button>
 
@@ -644,12 +644,12 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
               <div className="mt-3 border border-bdr rounded-md overflow-hidden">
                 <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50">
                   <span className="font-medium text-txt2">Sous-total</span>
-                  <span className="font-bold text-navy">{fmtNum(calc.subtotal)} F</span>
+                  <span className="font-bold text-navy dark:text-white">{fmtNum(calc.subtotal)} F</span>
                 </div>
                 {doc.tvaOn && (
                   <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50 bg-gray-50">
                     <span className="font-medium text-txt2">TVA ({calc.rate}%)</span>
-                    <span className="font-bold text-navy">{fmtNum(calc.tva)} F</span>
+                    <span className="font-bold text-navy dark:text-white">{fmtNum(calc.tva)} F</span>
                   </div>
                 )}
                 <div className="flex justify-between px-3 py-2.5 text-[13px] bg-navy font-bold">
@@ -663,17 +663,17 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             <div className="px-3.5 py-2.5 bg-gold-bg border border-gold rounded-md text-[11px]">
               <span className="font-medium text-txt2 italic">Arrêté la présente facture à la somme de :</span>
               <br />
-              <span className="font-bold text-navy uppercase">{numToWordsFCFA(Math.round(calc.total))}</span>
+              <span className="font-bold text-navy dark:text-white uppercase">{numToWordsFCFA(Math.round(calc.total))}</span>
             </div>
 
             {/* Delivery link for definitive */}
             {!isPF && doc.saleMode === "livraison" && (
               <div className="bg-gold-bg border border-gold rounded-xl p-4">
-                <h3 className="text-[11px] font-bold uppercase tracking-wide text-navy mb-2">Livraison associée</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-wide text-navy dark:text-white mb-2">Livraison associée</h3>
                 {doc.deliveryNotes && doc.deliveryNotes.length > 0 ? (
                   <div className="flex items-center gap-3">
                     <p className="text-[11px] text-txt2">
-                      Bon de livraison <span className="font-bold text-navy">{doc.deliveryNotes[0].num}</span> créé.
+                      Bon de livraison <span className="font-bold text-navy dark:text-white">{doc.deliveryNotes[0].num}</span> créé.
                     </p>
                     <button
                       onClick={() => router.push(`/bl?id=${doc.deliveryNotes![0].id}`)}
@@ -700,7 +700,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
           {/* Preview panel */}
           <div className="lg:sticky lg:top-[70px]">
             <div className="text-[10px] font-semibold text-txt2 uppercase tracking-wide mb-1.5">Aperçu du document</div>
-            <div ref={printRef} className="bg-white border border-bdr rounded shadow-md overflow-hidden">
+            <div ref={printRef} className="bg-white dark:bg-surface border border-bdr rounded shadow-md overflow-hidden">
               <DocumentPrintTemplate type={type} doc={doc} company={company} calc={calc} docNum={docNum} />
             </div>
           </div>

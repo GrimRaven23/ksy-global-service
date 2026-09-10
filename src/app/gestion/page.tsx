@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Building2, Users, ClipboardList, Shield, BarChart3, FileText, Truck } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Card, Badge, Skeleton, EmptyState, PageHeader } from "@/components/ui";
-import { roleLabel } from "@/lib/document-helpers";
+import { roleLabel, relativeTime } from "@/lib/document-helpers";
 
 interface UserInfo {
   id: string;
@@ -28,20 +28,6 @@ interface AuditEvent {
   createdAt: string;
   user?: { name: string } | null;
   details?: Record<string, unknown> | null;
-}
-
-function relativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMs / 3600000);
-  const diffDay = Math.floor(diffMs / 86400000);
-  if (diffMin < 1) return "À l'instant";
-  if (diffMin < 60) return `Il y a ${diffMin} min`;
-  if (diffHr < 24) return `Il y a ${diffHr}h`;
-  if (diffDay < 7) return `Il y a ${diffDay}j`;
-  return new Date(dateStr).toLocaleDateString("fr-FR");
 }
 
 function auditActionLabel(action: string): string {
@@ -82,7 +68,7 @@ function auditActionColor(action: string): string {
   if (action.startsWith("DOCUMENT")) return "bg-green-100 text-green-700";
   if (action.startsWith("DELIVERY")) return "bg-orange-100 text-orange-700";
   if (action.startsWith("CUSTOMER")) return "bg-teal-100 text-teal-700";
-  if (action.startsWith("COMPANY")) return "bg-gold/20 text-navy";
+  if (action.startsWith("COMPANY")) return "bg-gold/20 text-navy dark:bg-gold/20 dark:text-white";
   return "bg-gray-100 text-gray-600";
 }
 
@@ -188,7 +174,7 @@ export default function GestionPage() {
                       <s.icon className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm sm:text-lg font-bold text-navy truncate">{s.value}</p>
+                      <p className="text-sm sm:text-lg font-bold text-navy dark:text-white truncate">{s.value}</p>
                       <p className="text-[9px] sm:text-[10px] text-txt2 uppercase tracking-wide">{s.label}</p>
                     </div>
                   </Card>
@@ -197,18 +183,18 @@ export default function GestionPage() {
             )}
 
             <div>
-              <h2 className="text-[10px] sm:text-xs font-bold text-navy uppercase tracking-wide mb-3">Accès rapide</h2>
+              <h2 className="text-[10px] sm:text-xs font-bold text-navy dark:text-white uppercase tracking-wide mb-3">Accès rapide</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {managementSections.map((s) => (
                   <button
                     key={s.href}
                     onClick={() => router.push(s.href)}
-                    className="bg-white border border-bdr rounded-xl p-4 sm:p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
+                    className="bg-white border border-bdr rounded-xl dark:bg-surface dark:text-white p-4 sm:p-5 text-left hover:border-navy/30 hover:shadow-md transition-all duration-200 cursor-pointer group"
                   >
                     <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${s.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                       <s.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
-                    <h3 className="text-xs sm:text-sm font-bold text-navy mb-1">{s.title}</h3>
+                    <h3 className="text-xs sm:text-sm font-bold text-navy dark:text-white mb-1">{s.title}</h3>
                     <p className="text-[10px] sm:text-[11px] text-txt2 mb-2">{s.desc}</p>
                     <p className="text-[9px] text-txt2/60 uppercase tracking-wide">{s.access}</p>
                   </button>
@@ -219,7 +205,7 @@ export default function GestionPage() {
             <Card>
               <div className="flex items-center gap-2 mb-3">
                 <ClipboardList className="w-3 h-3 text-navy" />
-                <h2 className="text-[10px] font-bold uppercase tracking-wide text-navy">Activité récente</h2>
+                <h2 className="text-[10px] font-bold uppercase tracking-wide text-navy dark:text-white">Activité récente</h2>
               </div>
               {recentAudit.length === 0 ? (
                 <EmptyState icon={<ClipboardList className="w-8 h-8" />} message="Aucune activité récente" />

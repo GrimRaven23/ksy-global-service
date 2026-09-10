@@ -168,7 +168,7 @@ export async function DELETE(request: NextRequest) {
     const existingNote = await prisma.deliveryNote.findUnique({ where: { id }, select: { status: true, num: true } });
     if (!existingNote) return NextResponse.json({ error: "Bon de livraison non trouvé" }, { status: 404 });
 
-    if (existingNote.status !== "DRAFT") {
+    if (existingNote.status !== "DRAFT" && user.role !== "OWNER") {
       return NextResponse.json({ error: "Seuls les brouillons peuvent être supprimés" }, { status: 403 });
     }
 
@@ -180,6 +180,7 @@ export async function DELETE(request: NextRequest) {
       entityId: note.id,
       entityNum: note.num,
       userId: user.id,
+      details: existingNote.status !== "DRAFT" ? { override: "OWNER", fromStatus: existingNote.status } : undefined,
     });
 
     return NextResponse.json({ ok: true });

@@ -133,7 +133,7 @@ export default function AuditPage() {
                     <>
                       <tr
                         key={e.id}
-                        className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="border-b border-bdr/50 last:border-0 hover:bg-navy/[0.04] dark:hover:bg-white/5 transition-colors cursor-pointer"
                         onClick={() => setExpanded(expanded === e.id ? null : e.id)}
                       >
                         <td className="py-2.5 text-txt2">

@@ -183,7 +183,7 @@ export default function UsersPage() {
                   </thead>
                   <tbody>
                     {filtered.map((u) => (
-                      <tr key={u.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/users/${u.id}`)}>
+                      <tr key={u.id} className="border-b border-bdr/50 last:border-0 hover:bg-navy/[0.04] dark:hover:bg-white/5 transition-colors cursor-pointer" onClick={() => router.push(`/users/${u.id}`)}>
                         <td className="py-2.5">
                           <div className="flex items-center gap-2">
                             <Avatar name={u.name} size="sm" />

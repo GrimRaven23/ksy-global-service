@@ -197,11 +197,33 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const existing = await prisma.document.findUnique({ where: { id }, select: { status: true, num: true } });
+    const existing = await prisma.document.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        num: true,
+        deliveryNotes: { select: { id: true, num: true } },
+        conversions: { select: { id: true, num: true } },
+      },
+    });
     if (!existing) return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
 
     if (!canDeleteDocument(existing.status)) {
-      return NextResponse.json({ error: "Ce document ne peut plus être supprimé" }, { status: 403 });
+      return NextResponse.json({ error: "Ce document ne peut plus être supprimé. Seuls les brouillons et les documents annulés peuvent être supprimés." }, { status: 403 });
+    }
+
+    if (existing.deliveryNotes.length > 0) {
+      return NextResponse.json(
+        { error: `Supprimez d'abord le bon de livraison ${existing.deliveryNotes[0]!.num} lié à ce document.` },
+        { status: 409 }
+      );
+    }
+
+    if (existing.conversions.length > 0) {
+      return NextResponse.json(
+        { error: `Supprimez d'abord la facture définitive ${existing.conversions[0]!.num} issue de cette Pro Forma.` },
+        { status: 409 }
+      );
     }
 
     const doc = await deleteDocument(id);

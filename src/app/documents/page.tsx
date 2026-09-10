@@ -113,13 +113,21 @@ export default function DocumentsPage() {
     });
   }, [docs, typeFilter, statusFilter, search]);
 
-  const handleDelete = async (id: string, type: string) => {
-    const ok = await confirm("Supprimer ce document ? Cette action est irréversible.");
+  const handleDelete = async (doc: Doc) => {
+    const locked = doc.status !== "DRAFT" && doc.status !== "CANCELLED";
+    const linked = doc.type === "DEFINITIVE" && doc.deliveryNotes && doc.deliveryNotes.length > 0;
+    const ok = await confirm(
+      locked
+        ? `« ${doc.num} » n'est pas un brouillon (${doc.status}). En tant que propriétaire, vous pouvez forcer la suppression, mais l'historique d'audit est la seule trace conservée. Continuer ?`
+        : linked
+          ? `« ${doc.num} » est lié au bon de livraison ${doc.deliveryNotes![0]!.num}. Supprimez d'abord le bon de livraison, puis cette facture. Voulez-vous vraiment continuer ?`
+          : `Supprimer « ${doc.num} » ? Cette action est irréversible.`
+    );
     if (!ok) return;
-    const endpoint = type === "BL" ? "/api/delivery" : "/api/documents";
-    const res = await csrfFetch(`${endpoint}?id=${id}`, { method: "DELETE" });
+    const endpoint = doc.type === "BL" ? "/api/delivery" : "/api/documents";
+    const res = await csrfFetch(`${endpoint}?id=${doc.id}`, { method: "DELETE" });
     if (res.ok) {
-      setDocs((prev) => prev.filter((d) => d.id !== id));
+      setDocs((prev) => prev.filter((d) => d.id !== doc.id));
       toast.success("Document supprimé");
     } else {
       const err = await res.json().catch(() => ({ error: "Erreur lors de la suppression" }));
@@ -225,7 +233,7 @@ export default function DocumentsPage() {
                     </thead>
                     <tbody>
                       {filtered.map((d) => (
-                        <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-gray-50 transition-colors">
+                        <tr key={d.id} className="border-b border-bdr/50 last:border-0 hover:bg-navy/[0.04] dark:hover:bg-white/5 transition-colors">
                           <td className="py-2.5 text-xs sm:text-sm font-semibold text-navy dark:text-white cursor-pointer" onClick={() => openDoc(d)}>{d.num}</td>
                           <td className="py-2.5"><Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge></td>
                           <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{relativeTime(d.createdAt)}</td>
@@ -256,7 +264,7 @@ export default function DocumentsPage() {
                           <td className="py-2.5 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button onClick={() => openDoc(d)} className="text-[11px] sm:text-xs text-navy dark:text-white font-semibold hover:underline cursor-pointer">Ouvrir</button>
-                              <button onClick={() => handleDelete(d.id, d.type)} className="p-2 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
+                              <button onClick={() => handleDelete(d)} className="p-2 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -282,7 +290,7 @@ export default function DocumentsPage() {
                             <StatusBadge status={d.status} label={statusLabel(d.status)} />
                           </div>
                         </div>
-                        <button onClick={() => handleDelete(d.id, d.type)} className="p-1.5 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5 shrink-0" aria-label="Supprimer ce document">
+                        <button onClick={() => handleDelete(d)} className="p-1.5 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5 shrink-0" aria-label="Supprimer ce document">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>

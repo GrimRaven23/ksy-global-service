@@ -100,7 +100,8 @@ describe("RBAC Permissions", () => {
   describe("Role hierarchy", () => {
     it("should enforce correct hierarchy ordering", () => {
       expect(ROLE_HIERARCHY["OWNER"]).toBeGreaterThan(ROLE_HIERARCHY["IT_ADMIN"]);
-      expect(ROLE_HIERARCHY["IT_ADMIN"]).toBeGreaterThan(ROLE_HIERARCHY["ADMIN"]);
+      expect(ROLE_HIERARCHY["IT_ADMIN"]).toBeGreaterThan(ROLE_HIERARCHY["DEVELOPER"]);
+      expect(ROLE_HIERARCHY["DEVELOPER"]).toBeGreaterThan(ROLE_HIERARCHY["ADMIN"]);
       expect(ROLE_HIERARCHY["ADMIN"]).toBeGreaterThan(ROLE_HIERARCHY["SALES"]);
       expect(ROLE_HIERARCHY["SALES"]).toBeGreaterThan(ROLE_HIERARCHY["ASSISTANT"]);
       expect(ROLE_HIERARCHY["ASSISTANT"]).toBeGreaterThan(ROLE_HIERARCHY["DELIVERY"]);
@@ -108,7 +109,7 @@ describe("RBAC Permissions", () => {
     });
 
     it("should have all roles in hierarchy", () => {
-      const validRoles = ["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "PROJECT_MANAGER", "ASSISTANT", "COMPLIANCE", "DELIVERY", "WAREHOUSE", "VIEWER"];
+      const validRoles = ["OWNER", "IT_ADMIN", "DEVELOPER", "ADMIN", "ACCOUNTANT", "SALES", "PROJECT_MANAGER", "ASSISTANT", "COMPLIANCE", "DELIVERY", "WAREHOUSE", "VIEWER"];
       for (const role of validRoles) {
         expect(ROLE_HIERARCHY[role]).toBeDefined();
         expect(typeof ROLE_HIERARCHY[role]).toBe("number");
@@ -117,13 +118,25 @@ describe("RBAC Permissions", () => {
   });
 
   describe("All roles have valid permission arrays", () => {
-    const validRoles = ["OWNER", "IT_ADMIN", "ADMIN", "ACCOUNTANT", "SALES", "PROJECT_MANAGER", "ASSISTANT", "COMPLIANCE", "DELIVERY", "WAREHOUSE", "VIEWER"];
+    const validRoles = ["OWNER", "IT_ADMIN", "DEVELOPER", "ADMIN", "ACCOUNTANT", "SALES", "PROJECT_MANAGER", "ASSISTANT", "COMPLIANCE", "DELIVERY", "WAREHOUSE", "VIEWER"];
 
     it.each(validRoles)("%s role should exist and be non-empty", (role) => {
       const perms = ROLE_PERMISSIONS[role];
       expect(perms).toBeDefined();
       expect(Array.isArray(perms)).toBe(true);
       expect(perms.length).toBeGreaterThan(0);
+    });
+
+    it("DEVELOPER must not hold business authority", () => {
+      const dev = ROLE_PERMISSIONS["DEVELOPER"];
+      expect(dev).toContain("documents.read");
+      expect(dev).not.toContain("documents.finalize");
+      expect(dev).not.toContain("documents.cancel");
+      expect(dev).not.toContain("documents.delete");
+      expect(dev).not.toContain("company.update");
+      expect(dev).not.toContain("users.create");
+      expect(dev).not.toContain("users.disable");
+      expect(dev).not.toContain("security.manage");
     });
   });
 });

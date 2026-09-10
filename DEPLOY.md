@@ -78,9 +78,9 @@ npm run dev
 
 L'app tourne sur **http://localhost:3000**
 
-Identifiants par défaut :
-- Email : `admin@ksy-global.com`
-- Mot de passe : `Admin@12345`
+Provisionnement du propriétaire : définissez `OWNER_EMAIL` / `OWNER_PASSWORD`
+(min 12 caractères) avant `npm run db:seed`. Le mot de passe n'est jamais
+affiché ni commité ; le changement à la première connexion est imposé.
 
 ---
 
@@ -157,7 +157,7 @@ npm run db:seed
 ## Étape 7 : Vérification
 
 1. Ouvrez l'URL Vercel
-2. Connectez-vous avec `admin@ksy-global.com` / `Admin@12345`
+2. Connectez-vous avec `OWNER_EMAIL` / `OWNER_PASSWORD` (jamais commité)
 3. Allez dans **Paramètres** et remplissez les informations de l'entreprise
 4. Créez une **Facture Pro Forma** — vérifiez l'aperçu et l'impression
 5. Créez une **Facture Définitive** — testez le mode "Livraison"

@@ -16,6 +16,12 @@ function hashPassword(password: string): string {
 async function main() {
   console.log("Seeding CI database...");
 
+  const dbUrl = process.env.DATABASE_URL || "";
+  const isTestDb = /localhost|127\.0\.0\.1|ksy_test|_test([:/]|$)/.test(dbUrl);
+  if (!isTestDb) {
+    throw new Error("seed-ci refuse de s'exécuter hors base de test (DATABASE_URL doit viser localhost/ksy_test).");
+  }
+
   await prisma.companySettings.upsert({
     where: { id: "company_main" },
     update: {},

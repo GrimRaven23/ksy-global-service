@@ -3,8 +3,17 @@
 ## Role Hierarchy
 
 ```
-OWNER (100) > IT_ADMIN (90) > ADMIN (80) > ACCOUNTANT (75) > SALES (60) > PROJECT_MANAGER (55) > ASSISTANT (50) > COMPLIANCE (45) > DELIVERY (40) > WAREHOUSE (35) > VIEWER (10)
+OWNER (100) > IT_ADMIN (90) > DEVELOPER (85) > ADMIN (80) > ACCOUNTANT (75) > SALES (60) > PROJECT_MANAGER (55) > ASSISTANT (50) > COMPLIANCE (45) > DELIVERY (40) > WAREHOUSE (35) > VIEWER (10)
 ```
+
+> **DEVELOPER (85)** — technical maintenance, read-only on business data:
+> `documents.read`, `delivery.read`, `customers.read`, `company.read`,
+> `audit.read`, `system.manage`, `reports.view`, `inventory.read`.
+> Explicitly denied: `documents.create/update/finalize/cancel/delete/print`,
+> `proforma.*`, `company.update`, `users.*`, `roles.manage`, `security.manage`,
+> `delivery.create/update/confirm/delete/print`, `inventory.update`.
+> Tables below predate the DEVELOPER column; treat DEVELOPER as ❌ everywhere
+> except the ✅ list above.
 
 ## Permission Matrix
 
@@ -82,6 +91,7 @@ OWNER (100) > IT_ADMIN (90) > ADMIN (80) > ACCOUNTANT (75) > SALES (60) > PROJEC
 |---|---|
 | **OWNER** | Highest business authority. Full access to all features, settings, users, and audit. |
 | **IT_ADMIN** | Technical operations. User management, security monitoring, system health. Limited business data access. |
+| **DEVELOPER** | Technical maintenance only. Read business data, manage system health. No user management, no financial mutations, no company update. |
 | **ADMIN** | Operational administration. Document management, customer management, delivery oversight. |
 | **ACCOUNTANT** | Financial read access. Can view documents, print invoices, view company sensitive data. |
 | **SALES** | Create and manage proforma/definitive invoices. Manage customers. Print documents. |
@@ -94,8 +104,9 @@ OWNER (100) > IT_ADMIN (90) > ADMIN (80) > ACCOUNTANT (75) > SALES (60) > PROJEC
 
 ## Security Rules
 
-1. **Server-side enforcement**: All permissions are checked on the API routes, not just in the UI.
+1. **Server-side enforcement**: All permissions are checked on the API routes, not just in the UI. Status transitions require granular perms: `EMISE` on documents requires `documents.finalize`, `CANCELLED` requires `documents.cancel`, `EMISE` on delivery requires `delivery.confirm`; mixed status+content writes are rejected (400).
 2. **Object-level authorization**: Users can only access records they own (unless they have admin-level roles).
 3. **Self-edit restriction**: Users cannot change their own role or status.
-4. **Last owner protection**: The last active OWNER cannot be disabled or deleted.
+4. **Last owner protection**: The last active OWNER cannot be disabled, deleted, or demoted to a non-OWNER role.
 5. **Role escalation prevention**: Users cannot assign roles higher than their own hierarchy level.
+6. **Finalized status canonical**: `EMISE` is the canonical finalized state; legacy `FINALIZED` rows are backfilled to `EMISE` (migration `20260910000000`) and accepted transitionally (normalized server-side, aggregated in dashboards).

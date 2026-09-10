@@ -16,7 +16,7 @@ export async function GET() {
 
     const [totalDocuments, totalRevenue, documentsThisMonth, totalDeliveryNotes, recentDocs, recentDeliveries, recentActivity] = await Promise.all([
       prisma.document.count(),
-      prisma.document.aggregate({ _sum: { total: true }, where: { status: "FINALIZED" } }),
+      prisma.document.aggregate({ _sum: { total: true }, where: { status: { in: ["EMISE", "FINALIZED"] } } }),
       prisma.document.count({ where: { createdAt: { gte: startOfMonth } } }),
       prisma.deliveryNote.count(),
       prisma.document.findMany({

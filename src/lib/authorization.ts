@@ -11,7 +11,7 @@ export async function canAccessDocument(user: SessionUser, documentId: string): 
   });
   if (!doc) return false;
   if (doc.createdBy === user.id) return true;
-  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER"].includes(user.role);
+  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER", "DEVELOPER"].includes(user.role);
 }
 
 export async function canAccessDeliveryNote(user: SessionUser, deliveryNoteId: string): Promise<boolean> {
@@ -24,14 +24,14 @@ export async function canAccessDeliveryNote(user: SessionUser, deliveryNoteId: s
   });
   if (!bl) return false;
   if (bl.createdBy === user.id) return true;
-  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER"].includes(user.role);
+  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER", "DEVELOPER"].includes(user.role);
 }
 
 export async function canAccessCustomer(user: SessionUser, customerId: string): Promise<boolean> {
   if (user.role === "OWNER" || user.role === "IT_ADMIN" || user.role === "ADMIN") {
     return true;
   }
-  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER", "SALES", "DELIVERY", "WAREHOUSE", "ASSISTANT", "PROJECT_MANAGER"].includes(user.role);
+  return ["ACCOUNTANT", "COMPLIANCE", "VIEWER", "SALES", "DELIVERY", "WAREHOUSE", "ASSISTANT", "PROJECT_MANAGER", "DEVELOPER"].includes(user.role);
 }
 
 export function canEditDocument(status: string): boolean {

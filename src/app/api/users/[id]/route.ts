@@ -101,6 +101,13 @@ export async function PUT(
       }
     }
 
+    if (!isSelf && parsed.data.role && parsed.data.role !== "OWNER" && target.role === "OWNER") {
+      const activeOwners = await prisma.user.count({ where: { role: "OWNER", status: "ACTIVE" } });
+      if (activeOwners <= 1) {
+        return NextResponse.json({ error: "Impossible de rétrograder le dernier propriétaire actif" }, { status: 400 });
+      }
+    }
+
     if (parsed.data.email && parsed.data.email !== target.email) {
       const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
       if (existing) {

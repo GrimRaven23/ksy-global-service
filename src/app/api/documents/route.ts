@@ -54,6 +54,13 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
+    if (parsed.data.type === "PROFORMA") {
+      if (!hasPermission(user.role, "proforma.create") && !hasPermission(user.role, "documents.create")) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      }
+    } else if (!hasPermission(user.role, "documents.create")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
 
     const doc = await createDocument({
       ...parsed.data,
@@ -83,9 +90,6 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth().catch(() => null);
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-    if (!hasPermission(user.role, "documents.update")) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-    }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -104,13 +108,37 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const newStatus = parsed.data.status;
+    const newStatusRaw = parsed.data.status;
+    const newStatus = newStatusRaw === "FINALIZED" ? "EMISE" : newStatusRaw;
+    const hasContentFields =
+      parsed.data.date !== undefined ||
+      parsed.data.validity !== undefined ||
+      parsed.data.ref !== undefined ||
+      parsed.data.saleMode !== undefined ||
+      parsed.data.tvaOn !== undefined ||
+      parsed.data.tvaRate !== undefined ||
+      parsed.data.customerId !== undefined ||
+      parsed.data.customerName !== undefined ||
+      parsed.data.customerAddr !== undefined ||
+      parsed.data.customerPhone !== undefined ||
+      parsed.data.customerEmail !== undefined ||
+      parsed.data.items !== undefined;
+
     if (newStatus && newStatus !== existing.status) {
+      if (hasContentFields) {
+        return NextResponse.json({ error: "Transition de statut et modification de contenu interdites simultanément" }, { status: 400 });
+      }
       if (newStatus === "EMISE") {
+        if (!hasPermission(user.role, "documents.finalize")) {
+          return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+        }
         if (!canFinalizeDocument(existing.status)) {
           return NextResponse.json({ error: "Ce document ne peut pas être finalisé depuis son état actuel" }, { status: 403 });
         }
       } else if (newStatus === "CANCELLED") {
+        if (!hasPermission(user.role, "documents.cancel")) {
+          return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+        }
         if (!canCancelDocument(existing.status)) {
           return NextResponse.json({ error: "Ce document ne peut pas être annulé" }, { status: 403 });
         }
@@ -123,7 +151,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Ce document ne peut plus être modifié" }, { status: 403 });
     }
 
-    const doc = await updateDocument(id, parsed.data);
+    if ((hasContentFields || !newStatus || newStatus === existing.status) && !hasPermission(user.role, "documents.update")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const doc = await updateDocument(id, { ...parsed.data, ...(newStatus ? { status: newStatus } : {}) });
 
     let auditAction = "DOCUMENT_UPDATED";
     if (newStatus === "EMISE" && existing.status !== "EMISE") {

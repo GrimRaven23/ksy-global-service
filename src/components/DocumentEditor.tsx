@@ -515,7 +515,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             <Card>
               <SectionTitle>Informations de la facture</SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Field label="N° de facture" value={doc.num} placeholder={isPF ? "PF-2026-001" : "FAC-2026-001"} onChange={(v) => updateField("num", v)} disabled={!isDraft} />
+                <Field label="N° de facture (auto)" value={doc.num || docNum} placeholder={isPF ? "PF-2026-001" : "FAC-2026-001"} onChange={() => {}} disabled={true} />
                 <Field label="Date d'émission" type="date" value={doc.date} onChange={(v) => updateField("date", v)} disabled={!isDraft} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

@@ -13,17 +13,15 @@ export function typeColor(t: string): string {
 
 export function statusLabel(s: string): string {
   if (s === "DRAFT") return "Brouillon";
-  if (s === "EMISE") return "Émise";
-  if (s === "FINALIZED") return "Finalisé";
+  if (s === "EMISE" || s === "FINALIZED") return "Finalisée";
   if (s === "CONVERTED") return "Convertie";
-  if (s === "CANCELLED") return "Annulé";
+  if (s === "CANCELLED") return "Annulée";
   return s;
 }
 
 export function statusColor(s: string): string {
   if (s === "DRAFT") return "bg-gray-100 text-gray-600";
-  if (s === "EMISE") return "bg-blue-100 text-blue-700";
-  if (s === "FINALIZED") return "bg-green-100 text-green-700";
+  if (s === "EMISE" || s === "FINALIZED") return "bg-green-100 text-green-700";
   if (s === "CONVERTED") return "bg-purple-100 text-purple-700";
   if (s === "CANCELLED") return "bg-red-100 text-red-600";
   return "bg-gray-100 text-gray-600";
@@ -33,6 +31,7 @@ export function roleLabel(r: string): string {
   const labels: Record<string, string> = {
     OWNER: "Propriétaire",
     IT_ADMIN: "Admin IT",
+    DEVELOPER: "Développeur",
     ADMIN: "Administrateur",
     ACCOUNTANT: "Comptable",
     SALES: "Vente",
@@ -50,6 +49,7 @@ export function roleColor(r: string): string {
   const colors: Record<string, string> = {
     OWNER: "bg-gold/20 text-navy",
     IT_ADMIN: "bg-purple-100 text-purple-700",
+    DEVELOPER: "bg-slate-200 text-slate-700",
     ADMIN: "bg-blue-100 text-blue-700",
     ACCOUNTANT: "bg-emerald-100 text-emerald-700",
     SALES: "bg-green-100 text-green-700",

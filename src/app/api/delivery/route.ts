@@ -71,9 +71,6 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await requireAuth().catch(() => null);
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-    if (!hasPermission(user.role, "delivery.update")) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-    }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -92,9 +89,29 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const newStatus = parsed.data.status;
+    const newStatusRaw = parsed.data.status;
+    const newStatus = newStatusRaw === "FINALIZED" ? "EMISE" : newStatusRaw;
+    const hasContentFields =
+      parsed.data.date !== undefined ||
+      parsed.data.observations !== undefined ||
+      parsed.data.driverName !== undefined ||
+      parsed.data.driverPhone !== undefined ||
+      parsed.data.orderRef !== undefined ||
+      parsed.data.customerId !== undefined ||
+      parsed.data.customerName !== undefined ||
+      parsed.data.customerAddr !== undefined ||
+      parsed.data.customerPhone !== undefined ||
+      parsed.data.customerEmail !== undefined ||
+      parsed.data.items !== undefined;
+
     if (newStatus && newStatus !== existing.status) {
+      if (hasContentFields) {
+        return NextResponse.json({ error: "Transition de statut et modification de contenu interdites simultanément" }, { status: 400 });
+      }
       if (newStatus === "EMISE") {
+        if (!hasPermission(user.role, "delivery.confirm")) {
+          return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+        }
         if (!canConfirmDeliveryNote(existing.status)) {
           return NextResponse.json({ error: "Ce bon de livraison ne peut pas être confirmé" }, { status: 403 });
         }
@@ -107,7 +124,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Ce bon de livraison ne peut plus être modifié" }, { status: 403 });
     }
 
-    const note = await updateDeliveryNote(id, parsed.data);
+    if ((hasContentFields || !newStatus || newStatus === existing.status) && !hasPermission(user.role, "delivery.update")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const note = await updateDeliveryNote(id, { ...parsed.data, ...(newStatus ? { status: newStatus } : {}) });
 
     let auditAction = "DELIVERY_NOTE_UPDATED";
     if (newStatus === "EMISE" && existing.status !== "EMISE") {

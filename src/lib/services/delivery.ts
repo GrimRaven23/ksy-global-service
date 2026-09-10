@@ -99,27 +99,49 @@ export async function createDeliveryNote(data: {
 }
 
 export async function updateDeliveryNote(id: string, data: Record<string, unknown>) {
-  const company = await prisma.companySettings.findUnique({ where: { id: "company_main" } });
-  if (!company) throw new Error("Company settings not found");
-
-  const companySnap = deliveryCompanySnap(snapshotCompany(company));
-  const customerSnap: Record<string, string | null> = {};
-  if (data.customerName !== undefined) customerSnap.customerName = data.customerName as string;
-  if (data.customerAddr !== undefined) customerSnap.customerAddr = data.customerAddr as string;
-  if (data.customerPhone !== undefined) customerSnap.customerPhone = data.customerPhone as string;
-  if (data.customerEmail !== undefined) customerSnap.customerEmail = data.customerEmail as string;
-
   return prisma.$transaction(async (tx) => {
     const existing = await tx.deliveryNote.findUnique({ where: { id }, include: { items: true } });
     if (!existing) throw new Error("Delivery note not found");
 
-    const updateData: Record<string, unknown> = { ...companySnap, ...customerSnap };
+    const isStatusOnly =
+      data.status !== undefined &&
+      data.date === undefined &&
+      data.observations === undefined &&
+      data.driverName === undefined &&
+      data.driverPhone === undefined &&
+      data.orderRef === undefined &&
+      data.customerId === undefined &&
+      data.customerName === undefined &&
+      data.customerAddr === undefined &&
+      data.customerPhone === undefined &&
+      data.customerEmail === undefined &&
+      data.items === undefined;
+
+    const updateData: Record<string, unknown> = {};
+    if (!isStatusOnly && existing.status === "DRAFT") {
+      const company = await tx.companySettings.findUnique({ where: { id: "company_main" } });
+      if (!company) throw new Error("Company settings not found");
+      Object.assign(updateData, deliveryCompanySnap(snapshotCompany(company)));
+      if (data.customerName !== undefined) updateData.customerName = data.customerName as string;
+      if (data.customerAddr !== undefined) updateData.customerAddr = data.customerAddr as string;
+      if (data.customerPhone !== undefined) updateData.customerPhone = data.customerPhone as string;
+      if (data.customerEmail !== undefined) updateData.customerEmail = data.customerEmail as string;
+    }
+    if (existing.status !== "DRAFT") {
+      if (!isStatusOnly) throw new Error("Ce bon de livraison ne peut plus être modifié");
+      updateData.status = data.status === "FINALIZED" ? "EMISE" : data.status;
+      return tx.deliveryNote.update({
+        where: { id },
+        data: updateData,
+        include: { items: true, customer: true, document: true },
+      });
+    }
     if (data.date !== undefined) updateData.date = new Date(data.date as string);
     if (data.observations !== undefined) updateData.observations = data.observations as string;
     if (data.driverName !== undefined) updateData.driverName = data.driverName as string;
     if (data.driverPhone !== undefined) updateData.driverPhone = data.driverPhone as string;
     if (data.orderRef !== undefined) updateData.orderRef = data.orderRef as string;
-    if (data.status !== undefined) updateData.status = data.status;
+    if (data.status !== undefined) updateData.status = data.status === "FINALIZED" ? "EMISE" : data.status;
     if (data.customerId !== undefined) {
       updateData.customer = data.customerId
         ? { connect: { id: data.customerId as string } }

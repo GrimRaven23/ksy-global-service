@@ -5,11 +5,11 @@ import { hashPassword } from "../src/lib/auth/password";
 const DATABASE_URL = process.env.DATABASE_URL;
 
 const CREATE_TABLES_SQL = `
-DO $$ BEGIN CREATE TYPE "UserRole" AS ENUM ('OWNER','IT_ADMIN','ADMIN','SALES','ASSISTANT','DELIVERY','VIEWER'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "UserRole" AS ENUM ('OWNER','IT_ADMIN','DEVELOPER','ADMIN','ACCOUNTANT','SALES','ASSISTANT','PROJECT_MANAGER','DELIVERY','WAREHOUSE','COMPLIANCE','VIEWER'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "UserStatus" AS ENUM ('ACTIVE','DISABLED'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "DocumentType" AS ENUM ('PROFORMA','DEFINITIVE'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "SaleMode" AS ENUM ('DIRECTE','LIVRAISON'); EXCEPTION WHEN duplicate_object THEN null; END $$;
-DO $$ BEGIN CREATE TYPE "DocumentStatus" AS ENUM ('DRAFT','FINALIZED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN CREATE TYPE "DocumentStatus" AS ENUM ('DRAFT','EMISE','FINALIZED','CONVERTED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "AuditAction" AS ENUM ('USER_CREATED','USER_DISABLED','LOGIN_SUCCESS','LOGIN_FAILURE','PASSWORD_CHANGED','ROLE_CHANGED','COMPANY_SETTINGS_UPDATED','DOCUMENT_CREATED','DOCUMENT_UPDATED','DOCUMENT_PRINTED','DOCUMENT_FINALIZED','DOCUMENT_CANCELLED','DOCUMENT_DELETED','DELIVERY_NOTE_CREATED','DELIVERY_NOTE_UPDATED','DELIVERY_NOTE_PRINTED','DELIVERY_NOTE_CONFIRMED','DELIVERY_NOTE_DELETED','CUSTOMER_CREATED','CUSTOMER_UPDATED','CUSTOMER_DELETED'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 CREATE TABLE IF NOT EXISTS "users" ("id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,"email" TEXT NOT NULL UNIQUE,"name" TEXT NOT NULL,"password_hash" TEXT NOT NULL,"role" "UserRole" NOT NULL DEFAULT 'SALES',"status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',"last_login_at" TIMESTAMPTZ,"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now());
@@ -88,16 +88,22 @@ async function main() {
     }
     console.log("Sequences de numerotation creees.");
 
-    const email = "admin@ksy-global.com";
+    const email = process.env.OWNER_EMAIL || "admin@ksy-global.com";
+    const ownerPassword = process.env.OWNER_PASSWORD;
+    if (!ownerPassword || ownerPassword.length < 12) {
+      console.error("OWNER_PASSWORD manquant ou trop court (min 12 caractères).");
+      process.exit(1);
+    }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (!existing) {
       await prisma.user.create({
         data: {
           email,
           name: "Administrateur KSY",
-          passwordHash: hashPassword("Admin@12345"),
+          passwordHash: hashPassword(ownerPassword),
           role: "OWNER",
           status: "ACTIVE",
+          mustChangePassword: true,
         },
       });
       console.log("Utilisateur admin cree.");
@@ -112,8 +118,8 @@ async function main() {
   console.log("  Setup termine avec succes !");
   console.log("===========================================");
   console.log("\n  Identifiants de connexion:");
-  console.log("     Email:    admin@ksy-global.com");
-  console.log("     Mot de passe: Admin@12345");
+  console.log("     Email:    admin@ksy-global.com (ou OWNER_EMAIL)");
+  console.log("     Mot de passe: valeur de OWNER_PASSWORD (à changer à la première connexion)");
   console.log("\n  Changez ce mot de passe apres la premiere connexion!");
   console.log("===========================================\n");
 }

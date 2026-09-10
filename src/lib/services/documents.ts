@@ -112,26 +112,51 @@ export async function createDocument(data: {
 }
 
 export async function updateDocument(id: string, data: Record<string, unknown>) {
-  const company = await prisma.companySettings.findUnique({ where: { id: "company_main" } });
-  if (!company) throw new Error("Company settings not found");
-
-  const companySnap = snapshotCompany(company);
-  const customerSnap: Record<string, string | null> = {};
-  if (data.customerName !== undefined) customerSnap.customerName = data.customerName as string;
-  if (data.customerAddr !== undefined) customerSnap.customerAddr = data.customerAddr as string;
-  if (data.customerPhone !== undefined) customerSnap.customerPhone = data.customerPhone as string;
-  if (data.customerEmail !== undefined) customerSnap.customerEmail = data.customerEmail as string;
-
   return prisma.$transaction(async (tx) => {
     const existing = await tx.document.findUnique({ where: { id }, include: { items: true } });
     if (!existing) throw new Error("Document not found");
 
-    const updateData: Record<string, unknown> = { ...companySnap, ...customerSnap };
+    const isStatusOnly =
+      data.status !== undefined &&
+      data.date === undefined &&
+      data.validity === undefined &&
+      data.ref === undefined &&
+      data.saleMode === undefined &&
+      data.tvaOn === undefined &&
+      data.tvaRate === undefined &&
+      data.customerId === undefined &&
+      data.customerName === undefined &&
+      data.customerAddr === undefined &&
+      data.customerPhone === undefined &&
+      data.customerEmail === undefined &&
+      data.items === undefined;
+
+    const updateData: Record<string, unknown> = {};
+    if (!isStatusOnly) {
+      const company = await tx.companySettings.findUnique({ where: { id: "company_main" } });
+      if (!company) throw new Error("Company settings not found");
+      if (existing.status === "DRAFT") {
+        Object.assign(updateData, snapshotCompany(company));
+      }
+      if (data.customerName !== undefined) updateData.customerName = data.customerName as string;
+      if (data.customerAddr !== undefined) updateData.customerAddr = data.customerAddr as string;
+      if (data.customerPhone !== undefined) updateData.customerPhone = data.customerPhone as string;
+      if (data.customerEmail !== undefined) updateData.customerEmail = data.customerEmail as string;
+    }
+    if (existing.status !== "DRAFT") {
+      if (!isStatusOnly) throw new Error("Ce document ne peut plus être modifié");
+      const st = (data.status === "FINALIZED" ? "EMISE" : data.status) as "DRAFT" | "EMISE" | "CANCELLED" | "CONVERTED";
+      return tx.document.update({
+        where: { id },
+        data: { status: st },
+        include: { items: true, customer: true },
+      });
+    }
     if (data.date !== undefined) updateData.date = new Date(data.date as string);
     if (data.validity !== undefined) updateData.validity = data.validity ? new Date(data.validity as string) : null;
     if (data.ref !== undefined) updateData.ref = data.ref as string;
     if (data.saleMode !== undefined) updateData.saleMode = data.saleMode;
-    if (data.status !== undefined) updateData.status = data.status;
+    if (data.status !== undefined) updateData.status = data.status === "FINALIZED" ? "EMISE" : data.status;
     if (data.tvaOn !== undefined) updateData.tvaOn = data.tvaOn;
     if (data.tvaRate !== undefined) updateData.tvaRate = data.tvaRate;
     if (data.customerId !== undefined) updateData.customerId = data.customerId as string | null;

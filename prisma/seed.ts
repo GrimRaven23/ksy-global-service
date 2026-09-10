@@ -32,9 +32,12 @@ async function main() {
   }
   console.log("✓ Document sequences created");
 
-  // Create default owner user
-  const ownerEmail = "admin@ksy-global.com";
-  const ownerPassword = process.env.OWNER_PASSWORD || "Admin@12345";
+  // Create default owner user — OWNER_PASSWORD is mandatory (no default).
+  const ownerEmail = process.env.OWNER_EMAIL || "admin@ksy-global.com";
+  const ownerPassword = process.env.OWNER_PASSWORD;
+  if (!ownerPassword || ownerPassword.length < 12) {
+    throw new Error("OWNER_PASSWORD manquant ou trop court (min 12 caractères). Définissez OWNER_PASSWORD puis relancez.");
+  }
   const existingOwner = await prisma.user.findUnique({ where: { email: ownerEmail } });
   if (!existingOwner) {
     await prisma.user.create({
@@ -44,10 +47,10 @@ async function main() {
         passwordHash: hashPassword(ownerPassword),
         role: "OWNER",
         status: "ACTIVE",
-        mustChangePassword: false,
+        mustChangePassword: true,
       },
     });
-    console.log(`✓ Default owner created (${ownerEmail} / ${ownerPassword})`);
+    console.log(`✓ Default owner created (${ownerEmail}) — mot de passe initial à changer à la première connexion.`);
   } else {
     console.log("✓ Owner user already exists");
   }

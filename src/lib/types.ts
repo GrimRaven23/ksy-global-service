@@ -218,6 +218,7 @@ export type Permission =
 export const ROLE_HIERARCHY: Record<string, number> = {
   OWNER: 100,
   IT_ADMIN: 90,
+  DEVELOPER: 85,
   ADMIN: 80,
   ACCOUNTANT: 75,
   SALES: 60,
@@ -252,6 +253,16 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "audit.read",
     "security.manage",
     "system.manage",
+  ],
+  DEVELOPER: [
+    "documents.read",
+    "delivery.read",
+    "customers.read",
+    "company.read",
+    "audit.read",
+    "system.manage",
+    "reports.view",
+    "inventory.read",
   ],
   ADMIN: [
     "documents.read", "documents.create", "documents.update", "documents.finalize", "documents.cancel", "documents.print",

@@ -121,14 +121,13 @@ L'application est accessible sur **http://localhost:3000**
 
 ### 7. Connexion
 
-Utilisez les identifiants par défaut :
+Définissez `OWNER_EMAIL` / `OWNER_PASSWORD` (min 12 caractères) dans `.env`,
+puis `npm run db:seed`. Connectez-vous avec cet email et le mot de passe
+choisi — le changement à la première connexion est imposé (`mustChangePassword`).
 
-| Champ | Valeur |
-|-------|--------|
-| Email | `admin@ksy-global.com` |
-| Mot de passe | `Admin@12345` |
-
-**Changez ce mot de passe immédiatement** après la première connexion via la page Paramètres ou en modifiant directement dans la base de données.
+Ne commitez jamais de mot de passe réel. Les valeurs `Admin@12345` visibles
+dans `e2e/`, `scripts/seed-ci.ts` et les tests unitaires ne concernent que les
+bases de test isolées (`ksy_test`), jamais la production.
 
 ---
 

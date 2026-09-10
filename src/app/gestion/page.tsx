@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Users, ClipboardList, BarChart3, FileText, Truck } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { Card, Badge, Skeleton, EmptyState, PageHeader } from "@/components/ui";
+import { Card, Badge, Skeleton, EmptyState, PageHeader, Alert } from "@/components/ui";
 import { relativeTime } from "@/lib/document-helpers";
 import { csrfFetch } from "@/lib/csrf";
 
@@ -70,6 +70,7 @@ export default function GestionPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentAudit, setRecentAudit] = useState<AuditEvent[]>([]);
+  const [health, setHealth] = useState<Record<string, { status: string; missing?: string[] }> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,7 +79,8 @@ export default function GestionPage() {
       csrfFetch("/api/dashboard/stats").then((r) => r.json()).catch(() => null),
       csrfFetch("/api/users").then((r) => r.json()).catch(() => []),
       csrfFetch("/api/audit?limit=10").then((r) => r.json()).catch(() => ({ events: [] })),
-    ]).then(([me, st, users, audit]) => {
+      csrfFetch("/api/health").then((r) => r.json()).catch(() => null),
+    ]).then(([me, st, users, audit, h]) => {
       if (!me.user) { router.push("/login"); return; }
       if (me.user.role !== "OWNER" && me.user.role !== "IT_ADMIN" && me.user.role !== "ADMIN") {
         router.push("/");
@@ -92,6 +94,7 @@ export default function GestionPage() {
         totalRevenue: st?.totalRevenue || 0,
       });
       setRecentAudit(audit.events || []);
+      if (h?.checks) setHealth(h.checks);
       setLoading(false);
     }).catch(() => { router.push("/login"); });
   }, [router]);
@@ -153,6 +156,14 @@ export default function GestionPage() {
           </>
         ) : (
           <>
+            {health?.migrations && health.migrations.status !== "ok" && (
+              <Alert tone="danger" title="Base de données à mettre à jour">
+                Il manque des éléments du schéma ({(health.migrations.missing || ["inconnus"]).join(", ")}).
+                Les listes de documents et bons de livraison sont indisponibles tant que les migrations
+                en attente ne sont pas appliquées. Exécutez le script SQL de migration (voir DATABASE.md),
+                puis rechargez cette page.
+              </Alert>
+            )}
             {stats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 {[

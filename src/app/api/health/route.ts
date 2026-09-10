@@ -33,6 +33,32 @@ export async function GET() {
     checks.users = { status: "error" };
   }
 
+  // Migration check — schema must include finalized tracking + DEVELOPER role.
+  // When missing, document/delivery reads fail while dashboard still works.
+  try {
+    const migStart = Date.now();
+    const cols = await prisma.$queryRaw<{ column_name: string }[]>`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name IN ('documents', 'delivery_notes')
+        AND column_name IN ('finalized_at', 'finalized_by')
+    `;
+    const hasCols = cols.length >= 4;
+    const roles = await prisma.$queryRaw<{ present: boolean }[]>`
+      SELECT ('DEVELOPER' = ANY(enum_range(NULL::"UserRole")::text[])) AS present
+    `;
+    const hasRole = roles[0]?.present === true;
+    const missing: string[] = [];
+    if (!hasCols) missing.push("finalized_at/by");
+    if (!hasRole) missing.push("UserRole.DEVELOPER");
+    checks.migrations = {
+      status: missing.length === 0 ? "ok" : "missing",
+      latencyMs: Date.now() - migStart,
+    };
+    (checks.migrations as Record<string, unknown>).missing = missing;
+  } catch {
+    checks.migrations = { status: "error" };
+  }
+
   const allHealthy = Object.values(checks).every((c) => c.status === "ok");
   const totalLatency = Date.now() - startTime;
 

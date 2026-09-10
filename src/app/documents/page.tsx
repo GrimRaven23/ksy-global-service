@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Trash2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { Card, Badge, SearchInput, SkeletonTable, EmptyState, PageHeader, FilterPills, StatusBadge } from "@/components/ui";
+import { Card, Badge, SearchInput, SkeletonTable, EmptyState, PageHeader, FilterPills, StatusBadge, ErrorState } from "@/components/ui";
 import { typeLabel, typeColor, statusLabel, relativeTime } from "@/lib/document-helpers";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -32,22 +32,34 @@ export default function DocumentsPage() {
   const { confirm } = useConfirm();
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadRef, setLoadRef] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"ALL" | "PROFORMA" | "DEFINITIVE" | "BL">("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "DRAFT" | "EMISE" | "FINALIZED" | "CONVERTED" | "CANCELLED">("ALL");
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
+    setLoadError(null);
+    setLoadRef(undefined);
     Promise.all([
       csrfFetch("/api/auth/me").then((r) => r.json()),
-      csrfFetch("/api/documents?type=PROFORMA").then((r) => r.json()),
-      csrfFetch("/api/documents?type=DEFINITIVE").then((r) => r.json()),
-      csrfFetch("/api/delivery").then((r) => r.json()),
+      csrfFetch("/api/documents?type=PROFORMA").then((r) => r.json().then((b) => ({ ok: r.ok, body: b }))),
+      csrfFetch("/api/documents?type=DEFINITIVE").then((r) => r.json().then((b) => ({ ok: r.ok, body: b }))),
+      csrfFetch("/api/delivery").then((r) => r.json().then((b) => ({ ok: r.ok, body: b }))),
     ])
       .then(([me, pf, df, bl]) => {
         if (!me.user) { router.push("/login"); return; }
-        const pfArr = pf?.items || (Array.isArray(pf) ? pf : []);
-        const dfArr = df?.items || (Array.isArray(df) ? df : []);
-        const blArr = bl?.items || (Array.isArray(bl) ? bl : []);
+        const failed = [pf, df, bl].find((x) => !x.ok);
+        if (failed) {
+          setLoadError(failed.body?.error || "Le serveur n'a pas pu fournir la liste des documents.");
+          setLoadRef(failed.body?.reference);
+          setLoading(false);
+          return;
+        }
+        const pfArr = pf.body?.items || (Array.isArray(pf.body) ? pf.body : []);
+        const dfArr = df.body?.items || (Array.isArray(df.body) ? df.body : []);
+        const blArr = bl.body?.items || (Array.isArray(bl.body) ? bl.body : []);
         const pfDocs = pfArr.map((d: Record<string, unknown>) => ({
           id: String(d.id), num: String(d.num), type: "PROFORMA", date: String(d.date),
           total: Number(d.total), status: String(d.status), createdAt: String(d.createdAt),
@@ -76,8 +88,13 @@ export default function DocumentsPage() {
         setDocs(all);
         setLoading(false);
       })
-      .catch(() => { router.push("/login"); });
-  }, [router]);
+      .catch(() => {
+        setLoadError("Impossible de joindre le serveur. Vérifiez votre connexion puis réessayez.");
+        setLoading(false);
+      });
+  };
+
+  useEffect(load, [router]);
 
   const filtered = useMemo(() => {
     const isFinalized = (s: string) => s === "EMISE" || s === "FINALIZED";
@@ -176,6 +193,15 @@ export default function DocumentsPage() {
 
         {loading ? (
           <Card><SkeletonTable rows={8} /></Card>
+        ) : loadError ? (
+          <ErrorState
+            title="Documents indisponibles"
+            step="Chargement de la liste des documents"
+            cause={loadError}
+            action="Vérifiez votre connexion puis réessayez. Si le problème persiste, transmettez la référence à l'administrateur."
+            onRetry={load}
+            reference={loadRef}
+          />
         ) : (
           <Card>
             {filtered.length === 0 ? (

@@ -2,7 +2,10 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme inline {
+/* NOTE: plain @theme (NOT inline) so utilities reference var(--color-*)
+   at runtime and the html.dark overrides below take effect. */
+
+@theme {
   --color-navy: #0B1D3A;
   --color-navy-l: #132d52;
   --color-navy-xl: #1a3a6b;

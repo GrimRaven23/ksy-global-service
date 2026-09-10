@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, X, Users } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { Card, Badge, Button, Avatar, SearchInput, Field, Select, SectionTitle, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
+import { Card, Badge, Button, Avatar, SearchInput, Field, Select, SectionTitle, SkeletonTable, EmptyState, PageHeader } from "@/components/ui";
 import { roleLabel, roleColor, relativeTime } from "@/lib/document-helpers";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";

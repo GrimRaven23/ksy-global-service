@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  LayoutDashboard, FileText, Plus, Settings, User, LogOut, Menu, X, ChevronRight,
-  ClipboardList, Users, Shield, Sun, Moon, Monitor,
+  LayoutDashboard, FileText, Receipt, Truck, Users, ClipboardList, ShieldCheck,
+  Building2, UserRound, LogOut, Menu, X, Plus, HeartPulse, RefreshCw,
 } from "lucide-react";
-import { Avatar } from "@/components/ui";
+import { Avatar, ThemeSwitcher, OfflineBanner } from "@/components/ui";
 import { ROLE_PERMISSIONS, type Permission } from "@/lib/types";
+import { roleLabel } from "@/lib/document-helpers";
 import { csrfFetch } from "@/lib/csrf";
-import { useTheme } from "@/components/ThemeProvider";
 
 interface UserInfo {
   id: string;
@@ -18,40 +18,61 @@ interface UserInfo {
   role: string;
 }
 
-const NAV_ITEMS: { label: string; href: string; icon: typeof FileText; permission?: Permission; roles?: string[] }[] = [
-  { label: "Tableau de bord", href: "/", icon: LayoutDashboard },
-  { label: "Documents", href: "/documents", icon: FileText, permission: "documents.read" },
-  { label: "Paramètres", href: "/settings", icon: Settings, permission: "company.read" },
-];
-
-const CREATE_ITEMS: { label: string; href: string; permission: Permission }[] = [
-  { label: "Pro Forma", href: "/proforma", permission: "proforma.create" },
-  { label: "Définitive", href: "/definitive", permission: "proforma.create" },
-  { label: "Bon de Livraison", href: "/bl", permission: "delivery.create" },
-];
-
-const ADMIN_ITEMS: { label: string; href: string; icon: typeof FileText; permission: Permission }[] = [
-  { label: "Gestion", href: "/gestion", icon: Shield, permission: "system.manage" },
-  { label: "Utilisateurs", href: "/users", icon: Users, permission: "users.read" },
-  { label: "Audit", href: "/audit", icon: ClipboardList, permission: "audit.read" },
-];
-
-function roleLabel(role: string): string {
-  const labels: Record<string, string> = {
-    OWNER: "Propriétaire",
-    IT_ADMIN: "Admin IT",
-    ADMIN: "Administrateur",
-    ACCOUNTANT: "Comptable",
-    SALES: "Vente",
-    PROJECT_MANAGER: "Chef de Projet",
-    ASSISTANT: "Assistant",
-    DELIVERY: "Livreur",
-    WAREHOUSE: "Magasinier",
-    COMPLIANCE: "Conformité",
-    VIEWER: "Lecteur",
-  };
-  return labels[role] || role;
+interface NavItem {
+  label: string;
+  href: string;
+  icon: typeof FileText;
+  permission?: Permission;
 }
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Pilotage",
+    items: [{ label: "Tableau de bord", href: "/", icon: LayoutDashboard }],
+  },
+  {
+    title: "Factures",
+    items: [
+      { label: "Pro Forma", href: "/proforma", icon: FileText, permission: "proforma.create" },
+      { label: "Définitive", href: "/definitive", icon: Receipt, permission: "documents.read" },
+      { label: "Tous documents", href: "/documents", icon: FileText, permission: "documents.read" },
+    ],
+  },
+  {
+    title: "Livraison",
+    items: [{ label: "Bons de livraison", href: "/bl", icon: Truck, permission: "delivery.read" }],
+  },
+  {
+    title: "Clients",
+    items: [{ label: "Clients", href: "/customers", icon: Users, permission: "customers.read" }],
+  },
+  {
+    title: "Administration",
+    items: [
+      { label: "Équipe et accès", href: "/users", icon: ShieldCheck, permission: "users.read" },
+      { label: "Audit", href: "/audit", icon: ClipboardList, permission: "audit.read" },
+      { label: "Supervision", href: "/gestion", icon: HeartPulse, permission: "system.manage" },
+    ],
+  },
+  {
+    title: "Paramètres",
+    items: [
+      { label: "Entreprise", href: "/settings", icon: Building2, permission: "company.read" },
+      { label: "Mon compte", href: "/account", icon: UserRound },
+    ],
+  },
+];
+
+const QUICK_CREATE: { label: string; href: string; permission: Permission }[] = [
+  { label: "Pro Forma", href: "/proforma", permission: "proforma.create" },
+  { label: "Définitive", href: "/definitive", permission: "documents.create" },
+  { label: "Bon de livraison", href: "/bl", permission: "delivery.create" },
+];
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -63,24 +84,45 @@ function greeting(): string {
 export default function AppShell({ children, hideNav = false }: { children: React.ReactNode; hideNav?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, resolvedTheme, setTheme } = useTheme();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [health, setHealth] = useState<"ok" | "degraded" | "unknown">("unknown");
 
-  useEffect(() => {
+  const loadUser = useCallback(() => {
+    setLoading(true);
     csrfFetch("/api/auth/me")
       .then((r) => r.json())
       .then((me) => {
-        if (!me.user) {
-          router.push("/login");
-          return;
-        }
+        if (!me.user) { router.push("/login"); return; }
         setUser(me.user);
         setLoading(false);
       })
       .catch(() => router.push("/login"));
   }, [router]);
+
+  useEffect(() => { loadUser(); }, [loadUser]);
+
+  useEffect(() => {
+    const onOnline = () => setOffline(false);
+    const onOffline = () => setOffline(true);
+    setOffline(typeof navigator !== "undefined" && !navigator.onLine);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    csrfFetch("/api/health")
+      .then((r) => r.json())
+      .then((h) => setHealth(h.status === "healthy" ? "ok" : "degraded"))
+      .catch(() => setHealth("degraded"));
+  }, [user]);
 
   const handleLogout = async () => {
     await csrfFetch("/api/auth/logout", { method: "POST" });
@@ -89,296 +131,216 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
   };
 
   const userPerms: Permission[] = user ? ROLE_PERMISSIONS[user.role] || [] : [];
-  const can = (p: Permission) => userPerms.includes(p);
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
-  };
+  const can = (p?: Permission) => !p || userPerms.includes(p);
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const canSeeHealth = userPerms.includes("system.manage");
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen bg-bg dark:bg-[#0f1117]">
-        <header className="bg-white dark:bg-surface border-b border-bdr/60 h-14" />
-        <div className="h-16" />
+      <div className="min-h-screen bg-bg" role="status" aria-label="Chargement de la session">
+        <div className="animate-pulse flex">
+          <div className="hidden md:block w-64 bg-navy/90 min-h-screen" />
+          <div className="flex-1 p-6 space-y-4">
+            <div className="h-8 w-48 bg-gray-200 dark:bg-white/10 rounded-lg" />
+            <div className="h-24 bg-gray-100 dark:bg-white/5 rounded-xl" />
+            <div className="h-40 bg-gray-100 dark:bg-white/5 rounded-xl" />
+          </div>
+        </div>
       </div>
     );
   }
 
-  const visibleNav = NAV_ITEMS.filter((item) => !item.permission || can(item.permission));
-  const visibleCreate = CREATE_ITEMS.filter((item) => can(item.permission));
-  const visibleAdmin = ADMIN_ITEMS.filter((item) => can(item.permission));
+  const sections = NAV_SECTIONS.map((s) => ({ ...s, items: s.items.filter((i) => can(i.permission)) })).filter(
+    (s) => s.items.length > 0
+  );
+  const quickCreate = QUICK_CREATE.filter((q) => can(q.permission));
 
-  return (
-    <div className="min-h-screen bg-bg dark:bg-[#0f1117]">
-      {!hideNav && (
-        <>
-          {/* ── Desktop Header ── */}
-          <header className="bg-white dark:bg-surface border-b border-bdr/60 sticky top-0 z-50 hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-14">
-          {/* Logo */}
-          <button onClick={() => router.push("/")} className="flex items-center gap-2.5 cursor-pointer group">
-            <div className="w-8 h-8 rounded-lg gradient-navy flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
-              <span className="text-gold-lt font-bold text-xs">KSY</span>
-            </div>
-            <div className="hidden lg:block">
-              <h1 className="text-sm font-bold text-navy dark:text-white leading-tight group-hover:text-navy-l transition-colors">KSY GLOBAL SERVICE</h1>
-              <p className="text-[9px] text-txt3 leading-tight">KNOWLEDGE • SERVICE • YIELD</p>
-            </div>
-          </button>
+  const sidebarBody = (
+    <div className="flex flex-col h-full">
+      <button onClick={() => { router.push("/"); setMobileOpen(false); }} className="flex items-center gap-3 px-5 pt-6 pb-5 cursor-pointer text-left group">
+        <span className="w-11 h-11 rounded-2xl bg-gradient-to-br from-gold to-gold-lt flex items-center justify-center shadow-lg shadow-black/30 shrink-0 group-hover:scale-105 transition-transform">
+          <span className="text-navy font-black text-sm">KSY</span>
+        </span>
+        <span>
+          <span className="block text-[13px] font-black tracking-wide text-white leading-tight">KSY GLOBAL SERVICE</span>
+          <span className="block text-[9px] tracking-[0.22em] text-gold-lt/80 uppercase mt-0.5">Knowledge • Service • Yield</span>
+        </span>
+      </button>
 
-          {/* Nav links */}
-          <nav className="flex items-center gap-0.5" aria-label="Navigation principale">
-            {visibleNav.map((item) => (
-              <button
-                key={item.href}
-                onClick={() => router.push(item.href)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  isActive(item.href)
-                    ? "bg-navy text-white shadow-sm"
-                    : "text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-navy dark:hover:text-white"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-            {visibleCreate.length > 0 && (
-              <div className="relative group">
-                <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-gold bg-gold/8 hover:bg-gold/15 transition-all cursor-pointer flex items-center gap-1">
-                  <Plus className="w-3 h-3" /> Créer
-                </button>
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-surface border border-bdr/60 rounded-xl shadow-lg py-1 min-w-[180px] hidden group-hover:block z-50">
-                  {visibleCreate.map((item) => (
+      <div aria-hidden="true" className="mx-5 mb-4 flex items-center gap-2">
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-gold/50 to-gold/50" />
+        <span className="w-1.5 h-1.5 rotate-45 bg-gold/70" />
+        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-gold/50 to-gold/50" />
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-5" aria-label="Navigation principale">
+        {sections.map((section) => (
+          <div key={section.title}>
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{section.title}</p>
+            <ul className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <li key={item.href}>
                     <button
-                      key={item.href}
-                      onClick={() => router.push(item.href)}
-                      className="w-full text-left px-3 py-2 text-xs text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                      onClick={() => { router.push(item.href); setMobileOpen(false); }}
+                      aria-current={active ? "page" : undefined}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all cursor-pointer ${
+                        active
+                          ? "bg-gold text-navy shadow-md shadow-black/20"
+                          : "text-white/70 hover:text-white hover:bg-white/10"
+                      }`}
                     >
+                      <item.icon className="w-4 h-4 shrink-0" aria-hidden="true" />
                       {item.label}
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {visibleAdmin.length > 0 && (
-              <div className="relative group">
-                <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-txt2 hover:bg-gray-50 transition-all cursor-pointer flex items-center gap-1">
-                  Admin <ChevronRight className="w-3 h-3 rotate-90" />
-                </button>
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-surface border border-bdr/60 rounded-xl shadow-lg py-1 min-w-[180px] hidden group-hover:block z-50">
-                  {visibleAdmin.map((item) => (
-                    <button
-                      key={item.href}
-                      onClick={() => router.push(item.href)}
-                      className="w-full text-left px-3 py-2 text-xs text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </nav>
-
-          {/* User area */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg text-txt3 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-navy dark:hover:text-gold transition-colors cursor-pointer"
-              title={resolvedTheme === "dark" ? "Mode clair" : "Mode sombre"}
-              aria-label={resolvedTheme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
-            >
-              {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => router.push("/account")}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <Avatar name={user.name} size="sm" />
-              <div className="text-right hidden lg:block">
-                <p className="text-xs font-semibold text-navy dark:text-white leading-tight">{greeting()}, {user.name.split(" ")[0]}</p>
-                <p className="text-[9px] text-txt3 leading-tight">{roleLabel(user.role)}</p>
-              </div>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-lg text-txt3 hover:bg-red/5 hover:text-red transition-colors cursor-pointer"
-              title="Déconnexion"
-              aria-label="Se déconnecter"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-        </div>
-      </header>
-
-      {/* ── Mobile Header ── */}
-      <header className="bg-white dark:bg-surface border-b border-bdr/60 sticky top-0 z-50 md:hidden">
-        <div className="px-4 flex items-center justify-between h-12">
-          <button onClick={() => router.push("/")} className="flex items-center gap-2 cursor-pointer">
-            <div className="w-7 h-7 rounded-lg gradient-navy flex items-center justify-center shrink-0 shadow-sm">
-              <span className="text-gold-lt font-bold text-[10px]">KSY</span>
-            </div>
-            <span className="text-xs font-bold text-navy dark:text-white">KSY GLOBAL SERVICE</span>
-          </button>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-              title={resolvedTheme === "dark" ? "Mode clair" : "Mode sombre"}
-              aria-label={resolvedTheme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
-            >
-              {resolvedTheme === "dark" ? <Sun className="w-4 h-4 text-gold" /> : <Moon className="w-4 h-4 text-navy" />}
-            </button>
-            <button
-              onClick={() => router.push("/account")}
-              className="p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-              aria-label="Mon compte"
-            >
-              <Avatar name={user.name} size="sm" />
-            </button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-              aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5 text-navy dark:text-white" /> : <Menu className="w-5 h-5 text-navy dark:text-white" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="border-t border-bdr/60 bg-white dark:bg-surface animate-slide-up">
-            <nav className="px-3 py-2 space-y-0.5" aria-label="Navigation mobile">
-              {visibleNav.map((item) => (
-                <button
-                  key={item.href}
-                  onClick={() => { router.push(item.href); setMobileMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                    isActive(item.href)
-                      ? "bg-navy text-white"
-                      : "text-txt hover:bg-gray-50 dark:hover:bg-white/5"
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                </button>
-              ))}
-              {visibleCreate.length > 0 && (
-                <>
-                  <div className="pt-2 pb-1 px-3 text-[10px] font-semibold text-txt3 uppercase tracking-wider">Créer</div>
-                  {visibleCreate.map((item) => (
-                    <button
-                      key={item.href}
-                      onClick={() => { router.push(item.href); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4 text-gold" />
-                      {item.label}
-                    </button>
-                  ))}
-                </>
-              )}
-              {visibleAdmin.length > 0 && (
-                <>
-                  <div className="pt-2 pb-1 px-3 text-[10px] font-semibold text-txt3 uppercase tracking-wider">Administration</div>
-                  {visibleAdmin.map((item) => (
-                    <button
-                      key={item.href}
-                      onClick={() => { router.push(item.href); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </button>
-                  ))}
-                </>
-              )}
-              <div className="pt-2 border-t border-bdr/60">
-                <button
-                  onClick={() => { router.push("/account"); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-txt hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                  <User className="w-4 h-4" />
-                  Mon compte
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red hover:bg-red/5 transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Déconnexion
-                </button>
-              </div>
-            </nav>
-          </div>
-        )}
-      </header>
-        </>
-      )}
-
-      {/* ── Main content ── */}
-      <main id="main-content" className="flex-1">{children}</main>
-
-      {!hideNav && (
-        <>
-          {/* ── Mobile bottom nav ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-surface border-t border-bdr/60 z-50 pb-safe" aria-label="Navigation mobile">
-        <div className="flex items-center justify-around h-14">
-          <button
-            onClick={() => router.push("/")}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/") ? "text-navy dark:text-white" : "text-txt3"
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">Accueil</span>
-          </button>
-          <button
-            onClick={() => router.push("/documents")}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/documents") ? "text-navy dark:text-white" : "text-txt3"
-            }`}
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">Documents</span>
-          </button>
-          {visibleCreate.length > 0 && (
-            <button
-              onClick={() => router.push(visibleCreate[0].href)}
-              className="flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 text-gold"
-            >
-              <div className="w-10 h-10 -mt-5 gradient-navy rounded-full flex items-center justify-center shadow-lg">
-                <Plus className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-[9px] font-semibold">Créer</span>
-            </button>
-          )}
-          <button
-            onClick={() => router.push(visibleAdmin.length > 0 ? visibleAdmin[0].href : "/settings")}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/settings") || isActive("/gestion") || isActive("/users") || isActive("/audit") ? "text-navy dark:text-white" : "text-txt3"
-            }`}
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">Menu</span>
-          </button>
-          <button
-            onClick={() => router.push("/account")}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer min-w-0 transition-colors ${
-              isActive("/account") ? "text-navy dark:text-white" : "text-txt3"
-            }`}
-          >
-            <User className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">Compte</span>
-          </button>
-        </div>
+        ))}
       </nav>
 
-      {/* Spacer for bottom nav on mobile */}
-      <div className="h-14 md:hidden" />
-        </>
+      {quickCreate.length > 0 && (
+        <div className="px-4 pb-3">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gold-lt/80 mb-2 px-1">Créer</p>
+            <div className="space-y-1">
+              {quickCreate.map((q) => (
+                <button
+                  key={q.href}
+                  onClick={() => { router.push(q.href); setMobileOpen(false); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white/80 hover:text-navy hover:bg-gold transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" aria-hidden="true" /> {q.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
+
+      <div className="p-4 border-t border-white/10">
+        <button onClick={() => { router.push("/account"); setMobileOpen(false); }} className="w-full flex items-center gap-2.5 rounded-xl p-2 hover:bg-white/10 transition-colors cursor-pointer text-left">
+          <Avatar name={user.name} size="sm" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-bold text-white truncate">{greeting()}, {user.name.split(" ")[0]}</span>
+            <span className="block text-[10px] text-white/50 truncate">{user.email} • {roleLabel(user.role)}</span>
+          </span>
+        </button>
+        <button onClick={handleLogout} className="mt-1 w-full flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-xs font-semibold text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+          <LogOut className="w-3.5 h-3.5" aria-hidden="true" /> Déconnexion
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-bg">
+      {offline && <OfflineBanner />}
+      {!hideNav && health === "degraded" && (
+        <div role="alert" className="flex items-center justify-center gap-2 bg-red text-white text-xs font-semibold px-4 py-2">
+          <span>Le service rencontre des difficultés.</span>
+          {canSeeHealth ? (
+            <button onClick={() => router.push("/gestion")} className="underline underline-offset-2 cursor-pointer">Voir la supervision</button>
+          ) : (
+            <span className="opacity-80">Réessayez dans un instant ou contactez l&apos;administrateur.</span>
+          )}
+        </div>
+      )}
+
+      <div className="md:flex md:items-stretch">
+        {!hideNav && (
+          <aside className="hidden md:flex md:flex-col md:w-64 md:shrink-0 md:sticky md:top-0 md:h-screen gradient-navy shadow-xl z-40">
+            {sidebarBody}
+          </aside>
+        )}
+
+        <div className="flex-1 min-w-0 flex flex-col">
+          {!hideNav && (
+            <header className="md:hidden sticky top-0 z-50 bg-navy text-white shadow-md">
+              <div className="px-4 flex items-center justify-between h-13 py-2.5">
+                <button onClick={() => router.push("/")} className="flex items-center gap-2 cursor-pointer" aria-label="Accueil KSY">
+                  <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-gold to-gold-lt flex items-center justify-center shrink-0">
+                    <span className="text-navy font-black text-[10px]">KSY</span>
+                  </span>
+                  <span className="text-xs font-black tracking-wide">KSY GLOBAL SERVICE</span>
+                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => router.push("/account")} className="p-2 rounded-lg hover:bg-white/10 cursor-pointer" aria-label="Mon compte">
+                    <Avatar name={user.name} size="sm" />
+                  </button>
+                  <button
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    className="p-2 rounded-lg hover:bg-white/10 cursor-pointer"
+                    aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
+                    aria-expanded={mobileOpen}
+                  >
+                    {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+              {mobileOpen && (
+                <div className="max-h-[70vh] overflow-y-auto border-t border-white/10 animate-slide-up">{sidebarBody}</div>
+              )}
+            </header>
+          )}
+
+          {!hideNav && (
+            <div className="hidden md:flex items-center justify-between gap-3 px-6 lg:px-8 h-14 bg-white/70 dark:bg-surface/70 backdrop-blur border-b border-bdr/60 sticky top-0 z-30">
+              <p className="text-xs text-txt2 truncate">
+                Connecté en tant que <strong className="text-navy dark:text-white">{user.name}</strong>
+                <span className="text-txt3"> — {user.email} • {roleLabel(user.role)}</span>
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                {health !== "unknown" && (
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${health === "ok" ? "bg-green-bg text-green ring-green/25" : "bg-red-bg text-red ring-red/25"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${health === "ok" ? "bg-green animate-pulse" : "bg-red"}`} />
+                    {health === "ok" ? "Système opérationnel" : "Incident en cours"}
+                  </span>
+                )}
+                <ThemeSwitcher compact />
+                <button
+                  onClick={loadUser}
+                  className="p-1.5 rounded-lg text-txt3 hover:text-navy hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                  title="Actualiser la session"
+                  aria-label="Actualiser la session"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          <main id="main-content" className="flex-1 min-w-0">{children}</main>
+
+          {!hideNav && (
+            <>
+              <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-navy text-white border-t border-gold/20 z-50 pb-safe" aria-label="Navigation mobile">
+                <div className="flex items-center justify-around h-14">
+                  {[
+                    { href: "/", label: "Accueil" },
+                    { href: "/documents", label: "Docs" },
+                    { href: "/bl", label: "BL" },
+                    { href: "/account", label: "Compte" },
+                  ].map((l) => (
+                    <button
+                      key={l.href}
+                      onClick={() => router.push(l.href)}
+                      aria-current={isActive(l.href) ? "page" : undefined}
+                      className={`px-3 py-1 text-[10px] font-bold cursor-pointer ${isActive(l.href) ? "text-gold-lt" : "text-white/60"}`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </nav>
+              <div className="h-14 md:hidden" />
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

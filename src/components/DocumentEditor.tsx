@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
 import { fmtDate, fmtNum, numToWordsFCFA, calcInvoice, todayStr, esc, curYear, padN } from "@/lib/utils";
 import AppShell from "@/components/AppShell";
-import { Card, SectionTitle, Field, Button } from "@/components/ui";
+import { Card, SectionTitle, Field, Button, StatusBadge } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Company, DEFAULT_COMPANY } from "@/lib/company-defaults";
@@ -34,6 +34,10 @@ interface DocData {
   clientAddr: string;
   products: Product[];
   deliveryNotes?: { id: string; num: string }[];
+  convertedFrom?: { id: string; num: string; type: string } | null;
+  conversions?: { id: string; num: string; type: string }[];
+  finalizedAt?: string | null;
+  finalizedBy?: string | null;
 }
 
 const blankProduct = (): Product => ({ designation: "", quantity: "", price: "" });
@@ -111,6 +115,10 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             price: String(item.unitPrice),
           })) || [blankProduct()],
           deliveryNotes: existing.deliveryNotes || [],
+          convertedFrom: existing.convertedFrom || null,
+          conversions: existing.conversions || [],
+          finalizedAt: existing.finalizedAt || null,
+          finalizedBy: existing.finalizedBy || null,
         });
       }
       setTimeout(() => { isInitialLoad.current = false; }, 100);
@@ -256,7 +264,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
         }),
       }).catch(() => {});
     }
-  }, [doc, type]);
+  }, [doc, type, buildPayload, toast]);
 
   const autoSave = useDebounce(async (documentData: DocData) => {
     if (!documentData.id || !isDirty.current || isInitialLoad.current) return;
@@ -443,19 +451,18 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
             </span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               {doc.id && (
-                <span className={`text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1 rounded-full hidden sm:block ${
-                  doc.status === "DRAFT" ? "bg-gray-200 text-gray-700" :
-                  doc.status === "EMISE" ? "bg-green-100 text-green-800 ring-1 ring-green-200" :
-                  doc.status === "CONVERTED" ? "bg-purple-100 text-purple-800 ring-1 ring-purple-200" :
-                  doc.status === "CANCELLED" ? "bg-red-100 text-red-800 ring-1 ring-red-200" :
-                  "bg-gray-100 text-gray-600"
-                }`}>{
-                  doc.status === "DRAFT" ? "Brouillon" :
-                  doc.status === "EMISE" ? "Finalisée" :
-                  doc.status === "CONVERTED" ? "Convertie" :
-                  doc.status === "CANCELLED" ? "Annulée" :
-                  doc.status
-                }</span>
+                <span className="hidden sm:block">
+                  <StatusBadge
+                    status={doc.status}
+                    label={
+                      doc.status === "DRAFT" ? "Brouillon" :
+                      doc.status === "EMISE" || doc.status === "FINALIZED" ? "Finalisée" :
+                      doc.status === "CONVERTED" ? "Convertie" :
+                      doc.status === "CANCELLED" ? "Annulée" :
+                      doc.status
+                    }
+                  />
+                </span>
               )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
               <button onClick={handleNew} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
@@ -488,19 +495,21 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
 
         {!isDraft && doc.id && (
           <div className={`max-w-[1440px] mx-auto px-4 sm:px-5 lg:px-6 pt-3 ${
-            doc.status === "EMISE" ? "bg-green-50 border-b border-green-200" :
+            doc.status === "EMISE" || doc.status === "FINALIZED" ? "bg-green-50 border-b border-green-200" :
             doc.status === "CANCELLED" ? "bg-red-50 border-b border-red-200" :
             doc.status === "CONVERTED" ? "bg-purple-50 border-b border-purple-200" :
             ""
           }`}>
             <div className="flex items-center gap-2 py-2">
               <span className={`text-xs font-bold ${
-                doc.status === "EMISE" ? "text-green-700" :
+                doc.status === "EMISE" || doc.status === "FINALIZED" ? "text-green-700" :
                 doc.status === "CANCELLED" ? "text-red-700" :
                 doc.status === "CONVERTED" ? "text-purple-700" :
                 "text-gray-700"
               }`}>
-                {doc.status === "EMISE" && "✓ Document finalisé — les modifications sont désactivées"}
+                {(doc.status === "EMISE" || doc.status === "FINALIZED") && (
+                  <>✓ Document finalisé — les modifications sont désactivées{doc.finalizedAt ? ` (le ${fmtDate(doc.finalizedAt)})` : ""}</>
+                )}
                 {doc.status === "CANCELLED" && "✗ Document annulé"}
                 {doc.status === "CONVERTED" && "→ Document converti en facture définitive"}
               </span>
@@ -665,6 +674,29 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
               <br />
               <span className="font-bold text-navy dark:text-white uppercase">{numToWordsFCFA(Math.round(calc.total))}</span>
             </div>
+
+            {/* Conversion relationships */}
+            {doc.id && ((doc.convertedFrom && doc.convertedFrom.id) || (doc.conversions && doc.conversions.length > 0)) && (
+              <div className="bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/25 rounded-xl p-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-wide text-purple-800 dark:text-purple-200 mb-2">Documents liés</h3>
+                {doc.convertedFrom && doc.convertedFrom.id && (
+                  <p className="text-[11px] text-txt2 mb-1.5">
+                    Issue de la Pro Forma{" "}
+                    <button onClick={() => router.push(`/proforma?id=${doc.convertedFrom!.id}`)} className="font-bold text-purple-800 dark:text-purple-200 hover:underline cursor-pointer">
+                      {doc.convertedFrom.num}
+                    </button>
+                  </p>
+                )}
+                {doc.conversions && doc.conversions.length > 0 && doc.conversions[0] && (
+                  <p className="text-[11px] text-txt2">
+                    Facture définitive associée :{" "}
+                    <button onClick={() => router.push(`/definitive?id=${doc.conversions![0]!.id}`)} className="font-bold text-purple-800 dark:text-purple-200 hover:underline cursor-pointer">
+                      {doc.conversions[0].num}
+                    </button>
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Delivery link for definitive */}
             {!isPF && doc.saleMode === "livraison" && (

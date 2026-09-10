@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/lib/hooks";
 import { fmtDate, todayStr, esc, curYear, padN } from "@/lib/utils";
 import AppShell from "@/components/AppShell";
-import { SectionTitle, Field, Button } from "@/components/ui";
+import { SectionTitle, Field, Button, StatusBadge } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Company, DEFAULT_COMPANY } from "@/lib/company-defaults";
@@ -267,7 +267,7 @@ export default function BLEditor() {
         }),
       }).catch(() => {});
     }
-  }, [doc]);
+  }, [doc, toast]);
 
   const handleNew = async () => {
     const ok = await confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.");
@@ -468,17 +468,17 @@ export default function BLEditor() {
             <span className="text-[13px] sm:text-[15px] font-bold text-navy dark:text-white truncate">Bon de Livraison</span>
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               {doc.id && (
-                <span className={`text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1 rounded-full hidden sm:block ${
-                  doc.status === "DRAFT" ? "bg-gray-200 text-gray-700" :
-                  doc.status === "EMISE" ? "bg-green-100 text-green-800 ring-1 ring-green-200" :
-                  doc.status === "CANCELLED" ? "bg-red-100 text-red-800 ring-1 ring-red-200" :
-                  "bg-gray-100 text-gray-600"
-                }`}>{
-                  doc.status === "DRAFT" ? "Brouillon" :
-                  doc.status === "EMISE" ? "Confirmé" :
-                  doc.status === "CANCELLED" ? "Annulé" :
-                  doc.status
-                }</span>
+                <span className="hidden sm:block">
+                  <StatusBadge
+                    status={doc.status}
+                    label={
+                      doc.status === "DRAFT" ? "Brouillon" :
+                      doc.status === "EMISE" || doc.status === "FINALIZED" ? "Confirmé" :
+                      doc.status === "CANCELLED" ? "Annulé" :
+                      doc.status
+                    }
+                  />
+                </span>
               )}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gold bg-navy px-2 sm:px-3 py-1 rounded hidden sm:block">{docNum}</span>
               <button onClick={handleNew} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">

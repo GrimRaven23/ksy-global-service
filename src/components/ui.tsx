@@ -1,6 +1,8 @@
 "use client";
 
-import { Search, ChevronLeft, ChevronRight, Loader2, ArrowLeft } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, ArrowLeft, AlertTriangle, RefreshCw, WifiOff, Lock, FileWarning, Info, CheckCircle2, Pencil, CheckCheck, Ban, ArrowRightLeft, CircleDot } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { Sun, Moon, Monitor } from "lucide-react";
 
 // ─── Button ──────────────────────────────────────────────────
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "outline" | "gold";
@@ -452,6 +454,191 @@ export function FilterPills({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── StatusBadge (icon + text, never color-only) ─────────────
+const STATUS_META: Record<string, { icon: typeof CircleDot; classes: string }> = {
+  DRAFT: { icon: Pencil, classes: "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-200 ring-gray-300 dark:ring-white/15" },
+  EMISE: { icon: CheckCheck, classes: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300 ring-green-300 dark:ring-green-500/30" },
+  FINALIZED: { icon: CheckCheck, classes: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300 ring-green-300 dark:ring-green-500/30" },
+  CONVERTED: { icon: ArrowRightLeft, classes: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300 ring-purple-300 dark:ring-purple-500/30" },
+  CANCELLED: { icon: Ban, classes: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300 ring-red-300 dark:ring-red-500/30" },
+};
+
+export function StatusBadge({ status, label }: { status: string; label?: string }) {
+  const meta = STATUS_META[status] || { icon: CircleDot, classes: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-200 ring-gray-300" };
+  const Icon = meta.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ring-1 ${meta.classes}`}>
+      <Icon className="w-3 h-3" aria-hidden="true" />
+      {label ?? status}
+    </span>
+  );
+}
+
+// ─── Alert (proactive inline message) ────────────────────────
+export function Alert({
+  tone = "info",
+  title,
+  children,
+  action,
+  onAction,
+}: {
+  tone?: "info" | "success" | "warning" | "danger";
+  title?: string;
+  children: React.ReactNode;
+  action?: string;
+  onAction?: () => void;
+}) {
+  const tones = {
+    info: { box: "bg-blue-bg dark:bg-blue-500/10 border-blue/25", icon: <Info className="w-4 h-4 text-blue" />, title: "text-navy dark:text-white" },
+    success: { box: "bg-green-bg dark:bg-green-500/10 border-green/25", icon: <CheckCircle2 className="w-4 h-4 text-green" />, title: "text-green dark:text-green" },
+    warning: { box: "bg-gold-bg dark:bg-gold/10 border-gold/30", icon: <AlertTriangle className="w-4 h-4 text-gold" />, title: "text-navy dark:text-gold-lt" },
+    danger: { box: "bg-red-bg dark:bg-red-500/10 border-red/25", icon: <AlertTriangle className="w-4 h-4 text-red" />, title: "text-red" },
+  };
+  const t = tones[tone];
+  return (
+    <div role={tone === "danger" || tone === "warning" ? "alert" : "status"} className={`border rounded-xl px-3.5 py-3 flex items-start gap-2.5 ${t.box}`}>
+      <span className="mt-0.5 shrink-0">{t.icon}</span>
+      <div className="min-w-0 flex-1">
+        {title && <p className={`text-xs font-bold mb-0.5 ${t.title}`}>{title}</p>}
+        <div className="text-xs text-txt2 dark:text-white/70 leading-relaxed">{children}</div>
+        {action && onAction && (
+          <button onClick={onAction} className="mt-2 text-xs font-bold text-navy dark:text-gold-lt hover:underline cursor-pointer">
+            {action}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ErrorState (contextual: WHAT / WHERE / ACTION + ref) ───
+export function ErrorState({
+  title,
+  step,
+  cause,
+  action,
+  onRetry,
+  retryLabel = "Réessayer",
+  reference,
+  details,
+}: {
+  title: string;
+  step?: string;
+  cause?: string;
+  action?: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+  reference?: string;
+  details?: string;
+}) {
+  return (
+    <div role="alert" className="bg-white dark:bg-surface border border-red/25 rounded-2xl p-5 sm:p-6 max-w-lg mx-auto shadow-card">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-red-bg dark:bg-red-500/15 flex items-center justify-center shrink-0">
+          <FileWarning className="w-5 h-5 text-red" />
+        </div>
+        <h2 className="text-sm font-bold text-navy dark:text-white">{title}</h2>
+      </div>
+      <dl className="space-y-2 text-xs mb-4">
+        {step && (
+          <div className="flex gap-2">
+            <dt className="font-bold text-txt2 w-16 shrink-0 uppercase text-[10px] tracking-wide pt-0.5">Étape</dt>
+            <dd className="text-txt dark:text-white/80">{step}</dd>
+          </div>
+        )}
+        {cause && (
+          <div className="flex gap-2">
+            <dt className="font-bold text-txt2 w-16 shrink-0 uppercase text-[10px] tracking-wide pt-0.5">Cause</dt>
+            <dd className="text-txt dark:text-white/80">{cause}</dd>
+          </div>
+        )}
+        {action && (
+          <div className="flex gap-2">
+            <dt className="font-bold text-txt2 w-16 shrink-0 uppercase text-[10px] tracking-wide pt-0.5">Action</dt>
+            <dd className="text-txt dark:text-white/80">{action}</dd>
+          </div>
+        )}
+      </dl>
+      {reference && (
+        <p className="text-[11px] text-txt3 mb-4">
+          Référence : <span className="font-mono font-bold text-txt2">{reference}</span>
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {onRetry && (
+          <Button variant="primary" size="sm" onClick={onRetry}>
+            <RefreshCw className="w-3.5 h-3.5" /> {retryLabel}
+          </Button>
+        )}
+        {details && (
+          <details className="text-[11px] text-txt3">
+            <summary className="cursor-pointer hover:text-txt2 font-semibold">Voir les détails techniques</summary>
+            <pre className="mt-2 p-2 bg-gray-50 dark:bg-white/5 rounded-lg overflow-x-auto font-mono text-[10px]">{details}</pre>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function OfflineBanner() {
+  return (
+    <div role="alert" className="flex items-center justify-center gap-2 bg-gold text-navy text-xs font-bold px-4 py-2">
+      <WifiOff className="w-4 h-4" aria-hidden="true" />
+      Connexion perdue — vos modifications ne sont pas enregistrées. Vérifiez votre réseau.
+    </div>
+  );
+}
+
+export function ForbiddenNote() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] text-txt3">
+      <Lock className="w-3 h-3" aria-hidden="true" /> Action non autorisée pour votre rôle
+    </span>
+  );
+}
+
+// ─── ThemeSwitcher (Clair / Sombre / Système) ────────────────
+export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
+  const { theme, setTheme } = useTheme();
+  const options = [
+    { value: "light" as const, icon: Sun, label: "Clair" },
+    { value: "dark" as const, icon: Moon, label: "Sombre" },
+    { value: "system" as const, icon: Monitor, label: "Système" },
+  ];
+  return (
+    <div role="group" aria-label="Thème d'affichage" className={`inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-gray-100 dark:bg-white/10 ${compact ? "" : "border border-bdr/60"}`}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => setTheme(opt.value)}
+          aria-pressed={theme === opt.value}
+          title={`Thème ${opt.label.toLowerCase()}`}
+          className={`flex items-center gap-1 rounded-md transition-all cursor-pointer ${compact ? "p-1.5" : "px-2 py-1.5 text-[11px] font-semibold"} ${
+            theme === opt.value
+              ? "bg-white dark:bg-surface text-navy dark:text-gold-lt shadow-sm"
+              : "text-txt3 hover:text-txt"
+          }`}
+        >
+          <opt.icon className="w-3.5 h-3.5" />
+          {!compact && opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── KSY gold divider motif ──────────────────────────────────
+export function KsyDivider({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden="true" className={`flex items-center gap-2 ${className}`}>
+      <span className="h-px flex-1 bg-gradient-to-r from-transparent via-gold/60 to-gold" />
+      <span className="w-1.5 h-1.5 rotate-45 bg-gold shrink-0" />
+      <span className="h-px flex-1 bg-gradient-to-l from-transparent via-gold/60 to-gold" />
     </div>
   );
 }

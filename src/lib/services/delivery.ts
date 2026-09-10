@@ -111,7 +111,11 @@ export async function createDeliveryNote(data: {
   throw lastError;
 }
 
-export async function updateDeliveryNote(id: string, data: Record<string, unknown>) {
+export async function updateDeliveryNote(
+  id: string,
+  data: Record<string, unknown>,
+  opts?: { changedBy?: string }
+) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.deliveryNote.findUnique({ where: { id }, include: { items: true } });
     if (!existing) throw new Error("Delivery note not found");
@@ -143,6 +147,10 @@ export async function updateDeliveryNote(id: string, data: Record<string, unknow
     if (existing.status !== "DRAFT") {
       if (!isStatusOnly) throw new Error("Ce bon de livraison ne peut plus être modifié");
       updateData.status = data.status === "FINALIZED" ? "EMISE" : data.status;
+      if (updateData.status === "EMISE" && !existing.finalizedAt) {
+        updateData.finalizedAt = new Date();
+        updateData.finalizedBy = opts?.changedBy ?? null;
+      }
       return tx.deliveryNote.update({
         where: { id },
         data: updateData,
@@ -155,6 +163,10 @@ export async function updateDeliveryNote(id: string, data: Record<string, unknow
     if (data.driverPhone !== undefined) updateData.driverPhone = data.driverPhone as string;
     if (data.orderRef !== undefined) updateData.orderRef = data.orderRef as string;
     if (data.status !== undefined) updateData.status = data.status === "FINALIZED" ? "EMISE" : data.status;
+    if (updateData.status === "EMISE" && !existing.finalizedAt) {
+      updateData.finalizedAt = new Date();
+      updateData.finalizedBy = opts?.changedBy ?? null;
+    }
     if (data.customerId !== undefined) {
       updateData.customer = data.customerId
         ? { connect: { id: data.customerId as string } }

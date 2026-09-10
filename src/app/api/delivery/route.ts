@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const note = await updateDeliveryNote(id, { ...parsed.data, ...(newStatus ? { status: newStatus } : {}) });
+    const note = await updateDeliveryNote(id, { ...parsed.data, ...(newStatus ? { status: newStatus } : {}) }, { changedBy: user.id });
 
     let auditAction = "DELIVERY_NOTE_UPDATED";
     if (newStatus === "EMISE" && existing.status !== "EMISE") {

@@ -180,6 +180,9 @@ model Document {
 
   createdBy     String?        @map("created_by")
 
+  finalizedAt   DateTime?      @map("finalized_at")
+  finalizedBy   String?        @map("finalized_by")
+
   // Conversion tracking: PF → DF
   convertedFromId String?     @unique @map("converted_from_id")
   convertedFrom   Document?   @relation("DocumentConversion", fields: [convertedFromId], references: [id])
@@ -273,6 +276,9 @@ model DeliveryNote {
   createdBy     String?        @map("created_by")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  finalizedAt   DateTime?      @map("finalized_at")
+  finalizedBy   String?        @map("finalized_by")
 
   @@index([date])
   @@index([num])

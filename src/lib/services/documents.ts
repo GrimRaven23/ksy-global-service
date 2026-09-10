@@ -166,9 +166,14 @@ export async function updateDocument(
     if (existing.status !== "DRAFT") {
       if (!isStatusOnly) throw new Error("Ce document ne peut plus être modifié");
       const st = (data.status === "FINALIZED" ? "EMISE" : data.status) as "DRAFT" | "EMISE" | "CANCELLED" | "CONVERTED";
+      const statusData: Record<string, unknown> = { status: st };
+      if (st === "EMISE" && !existing.finalizedAt) {
+        statusData.finalizedAt = new Date();
+        statusData.finalizedBy = opts?.changedBy ?? null;
+      }
       const updated = await tx.document.update({
         where: { id },
-        data: { status: st },
+        data: statusData,
         include: { items: true, customer: true },
       });
       await createDocumentVersionTx(tx, id, opts?.changedBy, opts?.changeSummary ?? `Statut → ${st}`);
@@ -179,6 +184,10 @@ export async function updateDocument(
     if (data.ref !== undefined) updateData.ref = data.ref as string;
     if (data.saleMode !== undefined) updateData.saleMode = data.saleMode;
     if (data.status !== undefined) updateData.status = data.status === "FINALIZED" ? "EMISE" : data.status;
+    if (updateData.status === "EMISE" && !existing.finalizedAt) {
+      updateData.finalizedAt = new Date();
+      updateData.finalizedBy = opts?.changedBy ?? null;
+    }
     if (data.tvaOn !== undefined) updateData.tvaOn = data.tvaOn;
     if (data.tvaRate !== undefined) updateData.tvaRate = data.tvaRate;
     if (data.customerId !== undefined) updateData.customerId = data.customerId as string | null;

@@ -29,7 +29,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
 
-    if (!hasPermission(user.role, "documents.update")) {
+    if (
+      !hasPermission(user.role, "documents.update") &&
+      !hasPermission(user.role, "delivery.update") &&
+      !hasPermission(user.role, "documents.print") &&
+      !hasPermission(user.role, "delivery.print")
+    ) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 

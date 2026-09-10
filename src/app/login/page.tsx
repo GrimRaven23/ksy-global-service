@@ -9,12 +9,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [reference, setReference] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setReference(null);
     setLoading(true);
 
     try {
@@ -33,11 +35,16 @@ export default function LoginPage() {
           router.push("/");
         }
         router.refresh();
+      } else if (res.status === 429) {
+        setError("Trop de tentatives. Patientez quelques minutes puis réessayez.");
+      } else if (res.status >= 500) {
+        setError("Le service de connexion est indisponible. Réessayez dans un instant.");
+        if (data.reference) setReference(data.reference);
       } else {
-        setError(data.error || "Identifiants incorrects");
+        setError(data.error || "Identifiants incorrects. Vérifiez votre email et votre mot de passe.");
       }
     } catch {
-      setError("Erreur réseau");
+      setError("Impossible de joindre le serveur. Vérifiez votre connexion internet puis réessayez.");
     } finally {
       setLoading(false);
     }
@@ -96,6 +103,7 @@ export default function LoginPage() {
             {error && (
               <div role="alert" className="mb-4 px-3.5 py-2.5 bg-red-bg border border-red/20 rounded-lg text-xs text-red text-center animate-slide-up">
                 {error}
+                {reference && <span className="block mt-1 font-mono text-[10px] opacity-80">Référence : {reference}</span>}
               </div>
             )}
 

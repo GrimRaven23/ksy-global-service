@@ -2,18 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Users, ClipboardList, Shield, BarChart3, FileText, Truck } from "lucide-react";
+import { Building2, Users, ClipboardList, BarChart3, FileText, Truck } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Card, Badge, Skeleton, EmptyState, PageHeader } from "@/components/ui";
-import { roleLabel, relativeTime } from "@/lib/document-helpers";
+import { relativeTime } from "@/lib/document-helpers";
 import { csrfFetch } from "@/lib/csrf";
-
-interface UserInfo {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
 
 interface Stats {
   totalDocuments: number;
@@ -75,7 +68,6 @@ function auditActionColor(action: string): string {
 
 export default function GestionPage() {
   const router = useRouter();
-  const [user, setUser] = useState<UserInfo | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentAudit, setRecentAudit] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +84,6 @@ export default function GestionPage() {
         router.push("/");
         return;
       }
-      setUser(me.user);
       const usersArr = Array.isArray(users) ? users : [];
       setStats({
         totalDocuments: st?.totalDocuments || 0,

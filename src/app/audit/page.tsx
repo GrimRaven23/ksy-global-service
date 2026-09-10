@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Activity, ChevronDown, ChevronRight } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { Card, Badge, SearchInput, Pagination, Avatar, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
+import { Card, Badge, SearchInput, Pagination, Avatar, SkeletonTable, EmptyState, PageHeader } from "@/components/ui";
 import { relativeTime } from "@/lib/document-helpers";
 import { csrfFetch } from "@/lib/csrf";
 
@@ -53,7 +52,6 @@ const actionLabels: Record<string, string> = {
 };
 
 export default function AuditPage() {
-  const router = useRouter();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);

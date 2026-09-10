@@ -4,8 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Trash2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { Card, Badge, SearchInput, SkeletonTable, EmptyState, PageHeader, FilterPills } from "@/components/ui";
-import { typeLabel, typeColor, statusLabel, statusColor, relativeTime } from "@/lib/document-helpers";
+import { Card, Badge, SearchInput, SkeletonTable, EmptyState, PageHeader, FilterPills, StatusBadge } from "@/components/ui";
+import { typeLabel, typeColor, statusLabel, relativeTime } from "@/lib/document-helpers";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { csrfFetch } from "@/lib/csrf";
@@ -80,9 +80,14 @@ export default function DocumentsPage() {
   }, [router]);
 
   const filtered = useMemo(() => {
+    const isFinalized = (s: string) => s === "EMISE" || s === "FINALIZED";
     return docs.filter((d) => {
       if (typeFilter !== "ALL" && d.type !== typeFilter) return false;
-      if (statusFilter !== "ALL" && d.status !== statusFilter) return false;
+      if (statusFilter !== "ALL") {
+        if (statusFilter === "EMISE" || statusFilter === "FINALIZED") {
+          if (!isFinalized(d.status)) return false;
+        } else if (d.status !== statusFilter) return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         if (!d.num.toLowerCase().includes(q) && !(d.customerName || "").toLowerCase().includes(q)) return false;
@@ -158,9 +163,8 @@ export default function DocumentsPage() {
               label: "Statut",
               options: [
                 { value: "ALL", label: "Tous" },
-                { value: "DRAFT", label: statusLabel("DRAFT") },
-                { value: "EMISE", label: statusLabel("EMISE") },
-                { value: "FINALIZED", label: statusLabel("FINALIZED") },
+                { value: "DRAFT", label: "Brouillon" },
+                { value: "EMISE", label: "Finalisée" },
                 { value: "CONVERTED", label: statusLabel("CONVERTED") },
                 { value: "CANCELLED", label: statusLabel("CANCELLED") },
               ],
@@ -175,7 +179,7 @@ export default function DocumentsPage() {
         ) : (
           <Card>
             {filtered.length === 0 ? (
-              <EmptyState icon={<FileText className="w-10 h-10" />} message="Aucun document trouvé." />
+              <EmptyState icon={<FileText className="w-10 h-10" />} message={search || typeFilter !== "ALL" || statusFilter !== "ALL" ? "Aucun document ne correspond à ces critères. Modifiez les filtres ou créez un nouveau document." : "Aucun document pour le moment. Créez votre première facture pour démarrer."} />
             ) : (
               <>
                 {/* Desktop table */}
@@ -202,12 +206,12 @@ export default function DocumentsPage() {
                           <td className="py-2.5 text-xs text-txt2 hidden md:table-cell">{d.customerName || "—"}</td>
                           <td className="py-2.5 text-xs sm:text-sm text-right font-semibold">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</td>
                           <td className="py-2.5">
-                            <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
+                            <StatusBadge status={d.status} label={statusLabel(d.status)} />
                             {d.convertedFrom && (
-                              <span className="text-[9px] text-purple-600 block mt-0.5">de {d.convertedFrom.num}</span>
+                              <button onClick={() => router.push(`/proforma?id=${d.convertedFrom!.id}`)} className="text-[10px] text-purple-700 hover:underline block mt-0.5 cursor-pointer">de {d.convertedFrom.num}</button>
                             )}
-                            {d.conversions && d.conversions.length > 0 && (
-                              <span className="text-[9px] text-purple-600 block mt-0.5">→ {d.conversions[0].num}</span>
+                            {d.conversions && d.conversions.length > 0 && d.conversions[0] && (
+                              <button onClick={() => router.push(`/definitive?id=${d.conversions![0]!.id}`)} className="text-[10px] text-purple-700 hover:underline block mt-0.5 cursor-pointer">→ {d.conversions[0].num}</button>
                             )}
                           </td>
                           <td className="py-2.5 text-[11px] hidden lg:table-cell">
@@ -249,7 +253,7 @@ export default function DocumentsPage() {
                            <button onClick={() => openDoc(d)} className="text-xs font-bold text-navy dark:text-white hover:underline cursor-pointer text-left">{d.num}</button>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Badge color={typeColor(d.type)}>{typeLabel(d.type)}</Badge>
-                            <Badge color={statusColor(d.status)}>{statusLabel(d.status)}</Badge>
+                            <StatusBadge status={d.status} label={statusLabel(d.status)} />
                           </div>
                         </div>
                         <button onClick={() => handleDelete(d.id, d.type)} className="p-1.5 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5 shrink-0" aria-label="Supprimer ce document">

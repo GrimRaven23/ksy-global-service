@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { convertDocumentSchema } from "@/lib/validation";
 import { convertProformaToDefinitive } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -44,7 +45,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(definitive, { status: 201 });
   } catch (error: unknown) {
-    console.error("POST /api/documents/convert error:", error);
-    return NextResponse.json({ error: "Erreur lors de la conversion du document" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "";
+    if (/déjà été convertie|pro forma|introuvable/i.test(message)) {
+      return NextResponse.json({ error: message || "Erreur lors de la conversion du document" }, { status: 400 });
+    }
+    return apiServerError(error, "POST /api/documents/convert");
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 
 import { prisma } from "@/lib/prisma";
 
@@ -30,7 +31,6 @@ export async function GET(request: NextRequest) {
     ]);
     return NextResponse.json({ events, total, limit, offset });
   } catch (error) {
-    console.error("GET /api/audit error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/audit");
   }
 }

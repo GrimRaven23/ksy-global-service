@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { companySettingsSchema } from "@/lib/validation";
 import { getCompany, updateCompany } from "@/lib/services/company";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -29,8 +30,7 @@ export async function GET() {
     const hasSensitive = hasPermission(user.role, "company.read_sensitive");
     return NextResponse.json(hasSensitive ? company : stripSensitive(company as Record<string, unknown>));
   } catch (error) {
-    console.error("GET /api/settings error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/settings");
   }
 }
 
@@ -61,7 +61,6 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("PUT /api/settings error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "PUT /api/settings");
   }
 }

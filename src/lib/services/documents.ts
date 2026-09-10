@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { snapshotCompany } from "./company";
+import { createDocumentVersionTx } from "./document-versions";
 import type { PrismaClient } from "@prisma/client";
+
+function isUniqueConflict(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code: unknown }).code === "P2002";
+}
 
 function nextNum(seqType: string, year: number): string {
   const prefix = seqType === "PROFORMA" ? "PF" : "FAC";
@@ -73,45 +78,60 @@ export async function createDocument(data: {
   const tvaAmount = tvaOn ? Math.round(subtotal * tvaRate) / 100 : 0;
   const total = subtotal + tvaAmount;
 
-  return prisma.$transaction(async (tx) => {
-    const num = await getNextNumber(tx, data.type);
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const num = await getNextNumber(tx, data.type);
 
-    const doc = await tx.document.create({
-      data: {
-        type: data.type,
-        num,
-        date: data.date ? new Date(data.date) : new Date(),
-        validity: data.validity ? new Date(data.validity) : null,
-        ref: data.ref || null,
-        saleMode: data.saleMode || "DIRECTE",
-        status: "DRAFT",
-        tvaOn,
-        tvaRate,
-        subtotal,
-        tvaAmount,
-        total,
-        customerId: data.customerId || null,
-        ...companySnap,
-        ...customerSnap,
-        createdBy: data.userId || null,
-        items: {
-          create: computedItems.map((item) => ({
-            designation: item.designation,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.total,
-            sortOrder: item.sortOrder,
-          })),
-        },
-      },
-      include: { items: true, customer: true },
-    });
+        const doc = await tx.document.create({
+          data: {
+            type: data.type,
+            num,
+            date: data.date ? new Date(data.date) : new Date(),
+            validity: data.validity ? new Date(data.validity) : null,
+            ref: data.ref || null,
+            saleMode: data.saleMode || "DIRECTE",
+            status: "DRAFT",
+            tvaOn,
+            tvaRate,
+            subtotal,
+            tvaAmount,
+            total,
+            customerId: data.customerId || null,
+            ...companySnap,
+            ...customerSnap,
+            createdBy: data.userId || null,
+            items: {
+              create: computedItems.map((item) => ({
+                designation: item.designation,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+                sortOrder: item.sortOrder,
+              })),
+            },
+          },
+          include: { items: true, customer: true },
+        });
 
-    return doc;
-  });
+        await createDocumentVersionTx(tx, doc.id, data.userId, "Création du document");
+
+        return doc;
+      });
+    } catch (error) {
+      if (!isUniqueConflict(error)) throw error;
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
-export async function updateDocument(id: string, data: Record<string, unknown>) {
+export async function updateDocument(
+  id: string,
+  data: Record<string, unknown>,
+  opts?: { changedBy?: string; changeSummary?: string }
+) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.document.findUnique({ where: { id }, include: { items: true } });
     if (!existing) throw new Error("Document not found");
@@ -146,11 +166,13 @@ export async function updateDocument(id: string, data: Record<string, unknown>) 
     if (existing.status !== "DRAFT") {
       if (!isStatusOnly) throw new Error("Ce document ne peut plus être modifié");
       const st = (data.status === "FINALIZED" ? "EMISE" : data.status) as "DRAFT" | "EMISE" | "CANCELLED" | "CONVERTED";
-      return tx.document.update({
+      const updated = await tx.document.update({
         where: { id },
         data: { status: st },
         include: { items: true, customer: true },
       });
+      await createDocumentVersionTx(tx, id, opts?.changedBy, opts?.changeSummary ?? `Statut → ${st}`);
+      return updated;
     }
     if (data.date !== undefined) updateData.date = new Date(data.date as string);
     if (data.validity !== undefined) updateData.validity = data.validity ? new Date(data.validity as string) : null;
@@ -187,11 +209,13 @@ export async function updateDocument(id: string, data: Record<string, unknown>) 
     updateData.tvaAmount = tvaAmount;
     updateData.total = subtotal + tvaAmount;
 
-    return tx.document.update({
+    const updated = await tx.document.update({
       where: { id },
       data: updateData,
       include: { items: true, customer: true },
     });
+    await createDocumentVersionTx(tx, id, opts?.changedBy, opts?.changeSummary ?? (isStatusOnly ? `Statut → ${updateData.status as string}` : "Modification du brouillon"));
+    return updated;
   });
 }
 
@@ -283,54 +307,66 @@ export async function convertProformaToDefinitive(
   const tvaAmount = tvaOn ? Math.round(subtotal * tvaRate) / 100 : 0;
   const total = subtotal + tvaAmount;
 
-  return prisma.$transaction(async (tx) => {
-    const alreadyConverted = await tx.document.findFirst({
-      where: { convertedFromId: source.id },
-      select: { id: true },
-    });
-    if (alreadyConverted) {
-      throw new Error("Cette facture pro forma a déjà été convertie en facture définitive");
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const alreadyConverted = await tx.document.findFirst({
+          where: { convertedFromId: source.id },
+          select: { id: true },
+        });
+        if (alreadyConverted) {
+          throw new Error("Cette facture pro forma a déjà été convertie en facture définitive");
+        }
+
+        const num = await getNextNumber(tx, "DEFINITIVE");
+
+        const definitive = await tx.document.create({
+          data: {
+            type: "DEFINITIVE",
+            num,
+            date: new Date(),
+            validity: null,
+            ref: source.ref,
+            saleMode: options?.saleMode || source.saleMode,
+            status: "DRAFT",
+            tvaOn,
+            tvaRate,
+            subtotal,
+            tvaAmount,
+            total,
+            customerId: source.customerId,
+            ...companySnap,
+            ...customerSnap,
+            createdBy: options?.userId || null,
+            convertedFromId: source.id,
+            items: {
+              create: computedItems.map((item) => ({
+                designation: item.designation,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+                sortOrder: item.sortOrder,
+              })),
+            },
+          },
+          include: { items: true, customer: true },
+        });
+
+        await tx.document.update({
+          where: { id: source.id },
+          data: { status: "CONVERTED" },
+        });
+
+        await createDocumentVersionTx(tx, source.id, options?.userId, `Convertie en ${num}`);
+        await createDocumentVersionTx(tx, definitive.id, options?.userId, `Créée par conversion de ${source.num}`);
+
+        return definitive;
+      });
+    } catch (error) {
+      if (!isUniqueConflict(error)) throw error;
+      lastError = error;
     }
-
-    const num = await getNextNumber(tx, "DEFINITIVE");
-
-    const definitive = await tx.document.create({
-      data: {
-        type: "DEFINITIVE",
-        num,
-        date: new Date(),
-        validity: null,
-        ref: source.ref,
-        saleMode: options?.saleMode || source.saleMode,
-        status: "DRAFT",
-        tvaOn,
-        tvaRate,
-        subtotal,
-        tvaAmount,
-        total,
-        customerId: source.customerId,
-        ...companySnap,
-        ...customerSnap,
-        createdBy: options?.userId || null,
-        convertedFromId: source.id,
-        items: {
-          create: computedItems.map((item) => ({
-            designation: item.designation,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.total,
-            sortOrder: item.sortOrder,
-          })),
-        },
-      },
-      include: { items: true, customer: true },
-    });
-
-    await tx.document.update({
-      where: { id: source.id },
-      data: { status: "CONVERTED" },
-    });
-
-    return definitive;
-  });
+  }
+  throw lastError;
 }

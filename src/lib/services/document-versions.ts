@@ -1,5 +1,36 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
+
+type TxClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
+export async function createDocumentVersionTx(
+  tx: TxClient,
+  documentId: string,
+  changedBy?: string,
+  changeSummary?: string
+) {
+  const doc = await tx.document.findUnique({
+    where: { id: documentId },
+    include: { items: { orderBy: { sortOrder: "asc" } } },
+  });
+  if (!doc) throw new Error("Document not found");
+
+  const lastVersion = await tx.documentVersion.findFirst({
+    where: { documentId },
+    orderBy: { version: "desc" },
+    select: { version: true },
+  });
+
+  return tx.documentVersion.create({
+    data: {
+      documentId,
+      version: (lastVersion?.version ?? 0) + 1,
+      snapshot: JSON.parse(JSON.stringify(doc)) as Prisma.InputJsonValue,
+      changedBy: changedBy || null,
+      changeSummary: changeSummary || null,
+    },
+  });
+}
 
 export async function createDocumentVersion(
   documentId: string,

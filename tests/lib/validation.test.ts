@@ -137,4 +137,14 @@ describe("userCreateSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("should accept DEVELOPER role", () => {
+    const result = userCreateSchema.safeParse({
+      email: "dev@test.com",
+      name: "Dev",
+      password: "password123",
+      role: "DEVELOPER",
+    });
+    expect(result.success).toBe(true);
+  });
 });

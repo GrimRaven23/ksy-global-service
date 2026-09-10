@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { customerSchema } from "@/lib/validation";
 import { createAuditEvent } from "@/lib/services/audit";
 import { prisma } from "@/lib/prisma";
@@ -30,8 +31,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json(customers);
   } catch (error) {
-    console.error("GET /api/customers error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/customers");
   }
 }
 
@@ -71,8 +71,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(customer, { status: 201 });
   } catch (error) {
-    console.error("POST /api/customers error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "POST /api/customers");
   }
 }
 
@@ -122,8 +121,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("PUT /api/customers error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "PUT /api/customers");
   }
 }
 
@@ -167,7 +165,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("DELETE /api/customers error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "DELETE /api/customers");
   }
 }

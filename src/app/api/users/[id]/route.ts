@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission, canManageRole } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { userUpdateSchema } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -37,8 +38,7 @@ export async function GET(
 
     return NextResponse.json({ ...target, recentAudit });
   } catch (error) {
-    console.error("GET /api/users/[id] error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/users/[id]");
   }
 }
 
@@ -139,8 +139,7 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("PUT /api/users/[id] error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "PUT /api/users/[id]");
   }
 }
 
@@ -183,7 +182,6 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("DELETE /api/users/[id] error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "DELETE /api/users/[id]");
   }
 }

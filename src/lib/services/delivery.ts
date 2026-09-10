@@ -4,6 +4,10 @@ import { snapshotCompany } from "./company";
 
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
+function isUniqueConflict(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code: unknown }).code === "P2002";
+}
+
 function deliveryCompanySnap(full: ReturnType<typeof snapshotCompany>) {
   return {
     companyName: full.companyName,
@@ -65,37 +69,46 @@ export async function createDeliveryNote(data: {
     customerEmail: data.customerEmail || null,
   };
 
-  return prisma.$transaction(async (tx) => {
-    const num = await getNextBLNumber(tx);
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const num = await getNextBLNumber(tx);
 
-    const doc = await tx.deliveryNote.create({
-      data: {
-        num,
-        date: data.date ? new Date(data.date) : new Date(),
-        observations: data.observations || null,
-        driverName: data.driverName || null,
-        driverPhone: data.driverPhone || null,
-        orderRef: data.orderRef || null,
-        customer: data.customerId ? { connect: { id: data.customerId } } : undefined,
-        document: data.documentId ? { connect: { id: data.documentId } } : undefined,
-        company: { connect: { id: "company_main" } },
-        ...companySnap,
-        ...customerSnap,
-        createdBy: data.userId || null,
-        items: {
-          create: data.items.map((item, i) => ({
-            designation: item.designation,
-            quantity: item.quantity,
-            observation: item.observation || null,
-            sortOrder: item.sortOrder ?? i,
-          })),
-        },
-      },
-      include: { items: true, customer: true, document: true },
-    });
+        const doc = await tx.deliveryNote.create({
+          data: {
+            num,
+            date: data.date ? new Date(data.date) : new Date(),
+            observations: data.observations || null,
+            driverName: data.driverName || null,
+            driverPhone: data.driverPhone || null,
+            orderRef: data.orderRef || null,
+            customer: data.customerId ? { connect: { id: data.customerId } } : undefined,
+            document: data.documentId ? { connect: { id: data.documentId } } : undefined,
+            company: { connect: { id: "company_main" } },
+            ...companySnap,
+            ...customerSnap,
+            createdBy: data.userId || null,
+            items: {
+              create: data.items.map((item, i) => ({
+                designation: item.designation,
+                quantity: item.quantity,
+                observation: item.observation || null,
+                sortOrder: item.sortOrder ?? i,
+              })),
+            },
+          },
+          include: { items: true, customer: true, document: true },
+        });
 
-    return doc;
-  });
+        return doc;
+      });
+    } catch (error) {
+      if (!isUniqueConflict(error)) throw error;
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 export async function updateDeliveryNote(id: string, data: Record<string, unknown>) {

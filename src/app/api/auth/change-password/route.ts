@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, createSession, destroySession } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -65,7 +66,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, message: "Mot de passe modifié avec succès" });
   } catch (error) {
-    console.error("POST /api/auth/change-password error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "POST /api/auth/change-password");
   }
 }

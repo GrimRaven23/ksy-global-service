@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { documentCreateSchema, documentUpdateSchema } from "@/lib/validation";
 import { createDocument, updateDocument, listDocuments, deleteDocument, getDocument } from "@/lib/services/documents";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -36,8 +37,7 @@ export async function GET(request: NextRequest) {
     const result = await listDocuments(type, page, pageSize);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("GET /api/documents error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/documents");
   }
 }
 
@@ -81,8 +81,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(doc, { status: 201 });
   } catch (error: unknown) {
-    console.error("POST /api/documents error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "POST /api/documents");
   }
 }
 
@@ -155,7 +154,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const doc = await updateDocument(id, { ...parsed.data, ...(newStatus ? { status: newStatus } : {}) });
+    const doc = await updateDocument(id, { ...parsed.data, ...(newStatus ? { status: newStatus } : {}) }, {
+      changedBy: user.id,
+      changeSummary: newStatus && newStatus !== existing.status ? `Statut ${existing.status} → ${newStatus}` : "Modification du brouillon",
+    });
 
     let auditAction = "DOCUMENT_UPDATED";
     if (newStatus === "EMISE" && existing.status !== "EMISE") {
@@ -175,8 +177,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(doc);
   } catch (error: unknown) {
-    console.error("PUT /api/documents error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "PUT /api/documents");
   }
 }
 
@@ -215,7 +216,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
-    console.error("DELETE /api/documents error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "DELETE /api/documents");
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -48,7 +49,6 @@ export async function GET() {
       recentActivity,
     });
   } catch (error) {
-    console.error("GET /api/dashboard error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/dashboard");
   }
 }

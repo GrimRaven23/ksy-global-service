@@ -71,3 +71,8 @@ export function getErrorMessage(error: unknown): string {
   }
   return "Erreur serveur";
 }
+
+export function newCorrelationId(): string {
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, "0");
+  return `ERR-${new Date().getFullYear()}-${rand}`;
+}

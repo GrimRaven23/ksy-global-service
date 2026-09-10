@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { createBLFromDocSchema } from "@/lib/validation";
 import { createDeliveryNote } from "@/lib/services/delivery";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -66,7 +67,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(note, { status: 201 });
   } catch (error: unknown) {
-    console.error("POST /api/documents/create-bl error:", error);
-    return NextResponse.json({ error: "Erreur lors de la création du bon de livraison" }, { status: 500 });
+    return apiServerError(error, "POST /api/documents/create-bl");
   }
 }

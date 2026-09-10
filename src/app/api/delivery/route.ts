@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { deliveryCreateSchema, deliveryUpdateSchema } from "@/lib/validation";
 import { createDeliveryNote, updateDeliveryNote, listDeliveryNotes, deleteDeliveryNote, getDeliveryNote } from "@/lib/services/delivery";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -31,8 +32,7 @@ export async function GET(request: NextRequest) {
     const result = await listDeliveryNotes(page, pageSize);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("GET /api/delivery error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/delivery");
   }
 }
 
@@ -62,8 +62,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(note, { status: 201 });
   } catch (error: unknown) {
-    console.error("POST /api/delivery error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "POST /api/delivery");
   }
 }
 
@@ -146,8 +145,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(note);
   } catch (error: unknown) {
-    console.error("PUT /api/delivery error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "PUT /api/delivery");
   }
 }
 
@@ -186,7 +184,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
-    console.error("DELETE /api/delivery error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "DELETE /api/delivery");
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission, canManageRole } from "@/lib/auth/session";
+import { apiServerError } from "@/lib/api-response";
 import { hashPassword, generateRandomPassword } from "@/lib/auth/password";
 import { userCreateSchema, userUpdateSchema } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
@@ -20,8 +21,7 @@ export async function GET() {
     });
     return NextResponse.json(users);
   } catch (error) {
-    console.error("GET /api/users error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "GET /api/users");
   }
 }
 
@@ -74,8 +74,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ...newUser, tempPassword }, { status: 201 });
   } catch (error: unknown) {
-    console.error("POST /api/users error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "POST /api/users");
   }
 }
 
@@ -148,7 +147,6 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(updated);
   } catch (error: unknown) {
-    console.error("PUT /api/users error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return apiServerError(error, "PUT /api/users");
   }
 }

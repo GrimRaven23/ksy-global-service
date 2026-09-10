@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStatusCode, getErrorMessage, isAppError } from "@/lib/errors";
+import { getStatusCode, getErrorMessage, isAppError, newCorrelationId } from "@/lib/errors";
 
 export function apiSuccess<T>(data: T, status = 200) {
   return NextResponse.json({ ok: true, data }, { status });
@@ -45,4 +45,10 @@ export function apiRateLimited(retryAfter: number) {
       headers: { "Retry-After": Math.ceil(retryAfter).toString() },
     }
   );
+}
+
+export function apiServerError(error: unknown, context: string) {
+  const reference = newCorrelationId();
+  console.error(`${context} [${reference}]:`, error);
+  return NextResponse.json({ error: "Erreur serveur", reference }, { status: 500 });
 }

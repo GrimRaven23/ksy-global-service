@@ -8,6 +8,7 @@ import {
   isAppError,
   getStatusCode,
   getErrorMessage,
+  newCorrelationId,
 } from "@/lib/errors";
 
 describe("AppError", () => {
@@ -98,5 +99,16 @@ describe("getErrorMessage", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(getErrorMessage(new Error("dev error"))).toBe("dev error");
     vi.unstubAllEnvs();
+  });
+});
+
+describe("newCorrelationId", () => {
+  it("should match ERR-YYYY-XXXX format", () => {
+    expect(newCorrelationId()).toMatch(/^ERR-\d{4}-[A-Z0-9]{4}$/);
+  });
+
+  it("should generate distinct ids", () => {
+    const ids = new Set(Array.from({ length: 50 }, () => newCorrelationId()));
+    expect(ids.size).toBeGreaterThan(1);
   });
 });

@@ -61,13 +61,13 @@ export function getStatusCode(error: unknown): number {
 
 export function getErrorMessage(error: unknown): string {
   if (isAppError(error)) return error.message;
-  if (typeof error === "object" && error !== null && "message" in error) {
-    const msg = (error as { message: unknown }).message;
-    if (typeof msg === "string") return msg;
-  }
   if (error instanceof Error) {
     if (process.env.NODE_ENV === "production") return "Erreur serveur";
     return error.message;
+  }
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const msg = (error as { message: unknown }).message;
+    if (typeof msg === "string") return msg;
   }
   return "Erreur serveur";
 }

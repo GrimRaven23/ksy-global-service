@@ -24,7 +24,7 @@
     "test:a11y": "playwright test e2e/accessibility.spec.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
+    "@prisma/client": "^7.10.0",
     "@tailwindcss/postcss": "^4",
     "lucide-react": "^1.45.0",
     "next": "^15.5.25",

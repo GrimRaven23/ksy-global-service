@@ -6,6 +6,7 @@ import { createDocument, updateDocument, listDocuments, deleteDocument, getDocum
 import { createAuditEvent } from "@/lib/services/audit";
 import { canAccessDocument, canEditDocument, canDeleteDocument, canFinalizeDocument, canCancelDocument } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
+import type { AuditAction } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -159,7 +160,7 @@ export async function PUT(request: NextRequest) {
       changeSummary: newStatus && newStatus !== existing.status ? `Statut ${existing.status} → ${newStatus}` : "Modification du brouillon",
     });
 
-    let auditAction = "DOCUMENT_UPDATED";
+    let auditAction: AuditAction = "DOCUMENT_UPDATED";
     if (newStatus === "EMISE" && existing.status !== "EMISE") {
       auditAction = "DOCUMENT_FINALIZED";
     } else if (newStatus === "CANCELLED" && existing.status !== "CANCELLED") {
@@ -167,7 +168,7 @@ export async function PUT(request: NextRequest) {
     }
 
     await createAuditEvent({
-      action: auditAction as any,
+      action: auditAction,
       entityType: "document",
       entityId: doc.id,
       entityNum: doc.num,
@@ -208,10 +209,6 @@ export async function DELETE(request: NextRequest) {
     });
     if (!existing) return NextResponse.json({ error: "Document non trouvé" }, { status: 404 });
 
-    if (!canDeleteDocument(existing.status)) {
-      return NextResponse.json({ error: "Ce document ne peut plus être supprimé. Seuls les brouillons et les documents annulés peuvent être supprimés." }, { status: 403 });
-    }
-
     if (existing.deliveryNotes.length > 0) {
       return NextResponse.json(
         { error: `Supprimez d'abord le bon de livraison ${existing.deliveryNotes[0]!.num} lié à ce document.` },
@@ -224,6 +221,10 @@ export async function DELETE(request: NextRequest) {
         { error: `Supprimez d'abord la facture définitive ${existing.conversions[0]!.num} issue de cette Pro Forma.` },
         { status: 409 }
       );
+    }
+
+    if (!canDeleteDocument(existing.status)) {
+      return NextResponse.json({ error: "Ce document ne peut plus être supprimé. Seuls les brouillons et les documents annulés peuvent être supprimés." }, { status: 403 });
     }
 
     const doc = await deleteDocument(id);

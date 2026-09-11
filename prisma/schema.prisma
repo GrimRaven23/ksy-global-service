@@ -177,6 +177,7 @@ model Document {
 
   items         DocumentItem[]
   deliveryNotes DeliveryNote[]
+  versions      DocumentVersion[]
 
   createdBy     String?        @map("created_by")
 
@@ -210,6 +211,8 @@ model DocumentVersion {
   changedBy     String?  @map("changed_by")
   changeSummary String?  @map("change_summary")
   createdAt     DateTime @default(now()) @map("created_at")
+
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, version])
   @@index([documentId])

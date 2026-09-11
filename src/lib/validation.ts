@@ -4,29 +4,58 @@ import { z } from "zod";
 // COMPANY SETTINGS
 // ═══════════════════════════════════════════════════════════════
 
+const emptyToNull = z
+  .string()
+  .transform((v) => (v === "" ? null : v))
+  .optional()
+  .nullable();
+
+const emailOrNull = z
+  .string()
+  .transform((v) => (v === "" ? null : v))
+  .optional()
+  .nullable()
+  .refine((v) => v === null || v === undefined || z.string().email().max(200).safeParse(v).success, {
+    message: "Email invalide",
+  });
+
+const emailOptional = z.preprocess(
+  (v) => (v === "" || v === null ? undefined : v),
+  z.string().email().max(200).optional()
+);
+
+const urlOrNull = z
+  .string()
+  .transform((v) => (v === "" ? null : v))
+  .optional()
+  .nullable()
+  .refine((v) => v === null || v === undefined || z.string().url().max(200).safeParse(v).success, {
+    message: "URL invalide",
+  });
+
 export const companySettingsSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   slogan: z.string().max(200).optional(),
   activite: z.string().max(500).optional(),
-  address: z.string().max(500).nullable().optional(),
-  city: z.string().max(200).nullable().optional(),
-  phone: z.string().max(30).nullable().optional(),
-  phone2: z.string().max(30).nullable().optional(),
-  email: z.string().email().max(200).nullable().optional(),
-  web: z.string().url().max(200).nullable().optional(),
-  rccm: z.string().max(50).nullable().optional(),
-  ninea: z.string().max(50).nullable().optional(),
-  ifu: z.string().max(50).nullable().optional(),
-  bank: z.string().max(200).nullable().optional(),
-  bkName: z.string().max(200).nullable().optional(),
-  iban: z.string().max(50).nullable().optional(),
-  swift: z.string().max(20).nullable().optional(),
-  compte: z.string().max(50).nullable().optional(),
+  address: emptyToNull,
+  city: emptyToNull,
+  phone: emptyToNull,
+  phone2: emptyToNull,
+  email: emailOrNull,
+  web: urlOrNull,
+  rccm: emptyToNull,
+  ninea: emptyToNull,
+  ifu: emptyToNull,
+  bank: emptyToNull,
+  bkName: emptyToNull,
+  iban: emptyToNull,
+  swift: emptyToNull,
+  compte: emptyToNull,
   tvaDefault: z.enum(["oui", "non"]).optional(),
   tvaRate: z.number().min(0).max(100).optional(),
   currency: z.string().max(10).optional(),
-  logoUrl: z.string().url().max(500).nullable().optional(),
-  cachetUrl: z.string().url().max(500).nullable().optional(),
+  logoUrl: urlOrNull,
+  cachetUrl: urlOrNull,
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -39,7 +68,10 @@ export const customerSchema = z.object({
   address: z.string().max(500).nullable().optional(),
   city: z.string().max(200).nullable().optional(),
   phone: z.string().max(30).nullable().optional(),
-  email: z.string().email().max(200).nullable().optional(),
+  email: z.preprocess(
+    (v) => (v === "" ? null : v),
+    z.string().email().max(200).nullable().optional()
+  ),
   notes: z.string().max(1000).nullable().optional(),
 });
 
@@ -78,7 +110,7 @@ export const documentCreateSchema = z.object({
   customerName: z.string().max(200).optional(),
   customerAddr: z.string().max(500).optional(),
   customerPhone: z.string().max(30).optional(),
-  customerEmail: z.string().email().max(200).optional(),
+  customerEmail: emailOptional,
   items: z.array(documentItemSchema).min(1),
 });
 
@@ -94,7 +126,7 @@ export const documentUpdateSchema = z.object({
   customerName: z.string().max(200).optional(),
   customerAddr: z.string().max(500).optional(),
   customerPhone: z.string().max(30).optional(),
-  customerEmail: z.string().email().max(200).optional(),
+  customerEmail: emailOptional,
   items: z.array(documentItemSchema).min(1).optional(),
 });
 
@@ -112,7 +144,7 @@ export const deliveryCreateSchema = z.object({
   customerName: z.string().max(200).optional(),
   customerAddr: z.string().max(500).optional(),
   customerPhone: z.string().max(30).optional(),
-  customerEmail: z.string().email().max(200).optional(),
+  customerEmail: emailOptional,
   documentId: z.string().nullable().optional(),
   items: z.array(deliveryItemSchema).min(1),
 });
@@ -128,7 +160,7 @@ export const deliveryUpdateSchema = z.object({
   customerName: z.string().max(200).optional(),
   customerAddr: z.string().max(500).optional(),
   customerPhone: z.string().max(30).optional(),
-  customerEmail: z.string().email().max(200).optional(),
+  customerEmail: emailOptional,
   items: z.array(deliveryItemSchema).min(1).optional(),
 });
 

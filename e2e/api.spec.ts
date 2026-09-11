@@ -21,7 +21,7 @@ test.describe("API - Auth", () => {
     const res = await request.post("/api/auth/login", {
       data: { email: "nonexistent@email.com", password: "wrongpass" },
     });
-    expect([401, 500]).toContain(res.status());
+    expect(res.status()).toBe(401);
   });
 
   test("POST /api/auth/login rejects empty body", async ({ request }) => {
@@ -53,7 +53,7 @@ test.describe("API - Auth", () => {
 test.describe("API - Documents", () => {
   test("GET /api/documents requires auth", async ({ request }) => {
     const res = await request.get("/api/documents");
-    expect([200, 401]).toContain(res.status());
+    expect(res.status()).toBe(401);
   });
 
   test("GET /api/documents returns paginated result", async ({ request }) => {
@@ -61,24 +61,23 @@ test.describe("API - Documents", () => {
       data: { email: TEST_EMAIL, password: TEST_PASSWORD },
     });
     const res = await request.get("/api/documents");
-    if (res.ok()) {
-      const body = await res.json();
-      expect(body.items || Array.isArray(body)).toBeTruthy();
-    }
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.items || Array.isArray(body)).toBeTruthy();
   });
 });
 
 test.describe("API - Delivery", () => {
   test("GET /api/delivery requires auth", async ({ request }) => {
     const res = await request.get("/api/delivery");
-    expect([200, 401]).toContain(res.status());
+    expect(res.status()).toBe(401);
   });
 });
 
 test.describe("API - Customers", () => {
   test("GET /api/customers requires auth", async ({ request }) => {
     const res = await request.get("/api/customers");
-    expect([200, 401]).toContain(res.status());
+    expect(res.status()).toBe(401);
   });
 
   test("POST /api/customers creates customer", async ({ request, context }) => {
@@ -156,7 +155,7 @@ test.describe("API - CSRF Protection", () => {
     expect(loginRes.ok()).toBeTruthy();
 
     const res = await request.post("/api/documents", {
-      data: { type: "PROFORMA", items: [] },
+      data: { type: "PROFORMA", items: [{ designation: "Test", quantity: 1, unitPrice: 100 }] },
     });
     expect(res.status()).toBe(403);
     const body = await res.json();

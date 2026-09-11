@@ -50,5 +50,5 @@ export function apiRateLimited(retryAfter: number) {
 export function apiServerError(error: unknown, context: string) {
   const reference = newCorrelationId();
   console.error(`${context} [${reference}]:`, error);
-  return NextResponse.json({ error: "Erreur serveur", reference }, { status: 500 });
+  return NextResponse.json({ ok: false, error: "Erreur serveur", reference }, { status: 500 });
 }

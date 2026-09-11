@@ -295,7 +295,7 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
               </p>
               <div className="flex items-center gap-2 shrink-0">
                 {health !== "unknown" && (
-                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${health === "ok" ? "bg-green-bg text-green ring-green/25" : "bg-red-bg text-red ring-red/25"}`}>
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${health === "ok" ? "bg-green-bg text-green-700 dark:text-green-300 ring-green/25" : "bg-red-bg text-red ring-red/25"}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${health === "ok" ? "bg-green animate-pulse" : "bg-red"}`} />
                     {health === "ok" ? "Système opérationnel" : "Incident en cours"}
                   </span>

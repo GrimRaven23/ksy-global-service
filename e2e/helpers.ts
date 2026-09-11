@@ -23,7 +23,7 @@ export async function setupTestUser(page: Page) {
 }
 
 export async function loginViaAPI(
-  request: any,
+  request: { post: (url: string, options: Record<string, unknown>) => Promise<{ json: () => Promise<Record<string, unknown>> }> },
   email = TEST_EMAIL,
   password = TEST_PASSWORD
 ) {

@@ -27,7 +27,7 @@ export async function canAccessDeliveryNote(user: SessionUser, deliveryNoteId: s
   return ["ACCOUNTANT", "COMPLIANCE", "VIEWER", "DEVELOPER"].includes(user.role);
 }
 
-export async function canAccessCustomer(user: SessionUser, customerId: string): Promise<boolean> {
+export async function canAccessCustomer(user: SessionUser, _customerId: string): Promise<boolean> {
   if (user.role === "OWNER" || user.role === "IT_ADMIN" || user.role === "ADMIN") {
     return true;
   }

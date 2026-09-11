@@ -6,6 +6,7 @@ import { createDeliveryNote, updateDeliveryNote, listDeliveryNotes, deleteDelive
 import { createAuditEvent } from "@/lib/services/audit";
 import { canAccessDeliveryNote, canEditDeliveryNote, canConfirmDeliveryNote } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
+import type { AuditAction } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -129,13 +130,13 @@ export async function PUT(request: NextRequest) {
 
     const note = await updateDeliveryNote(id, { ...parsed.data, ...(newStatus ? { status: newStatus } : {}) }, { changedBy: user.id });
 
-    let auditAction = "DELIVERY_NOTE_UPDATED";
+    let auditAction: AuditAction = "DELIVERY_NOTE_UPDATED";
     if (newStatus === "EMISE" && existing.status !== "EMISE") {
       auditAction = "DELIVERY_NOTE_CONFIRMED";
     }
 
     await createAuditEvent({
-      action: auditAction as any,
+      action: auditAction,
       entityType: "delivery_note",
       entityId: note.id,
       entityNum: note.num,

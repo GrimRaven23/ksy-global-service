@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/auth/password";
+import { verifyPassword, hashPassword, needsRehash } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { loginSchema } from "@/lib/validation";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -52,9 +52,13 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      const updateData: Record<string, unknown> = { lastLoginAt: new Date() };
+      if (needsRehash(user.passwordHash)) {
+        updateData.passwordHash = hashPassword(password);
+      }
       await prisma.user.update({
         where: { id: user.id },
-        data: { lastLoginAt: new Date() },
+        data: updateData,
       });
     } catch (dbError) {
       logger.error("Failed to update lastLogin", "auth", { userId: user.id }, dbError);

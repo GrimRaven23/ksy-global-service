@@ -254,7 +254,7 @@ export default function DocumentsPage() {
                                 {d.deliveryNotes![0].num}
                               </button>
                             ) : d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" ? (
-                              <button onClick={() => handleCreateBL(d)} className="text-gold font-semibold hover:underline cursor-pointer text-[11px]">
+                              <button onClick={() => handleCreateBL(d)} className="text-[#8a6d1f] dark:text-gold font-semibold hover:underline cursor-pointer text-[11px]">
                                 + Créer BL
                               </button>
                             ) : (
@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                         <p className="text-[9px] text-purple-600 mt-1">→ {d.conversions[0].num}</p>
                       )}
                       {d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" && !d.deliveryNotes?.length && (
-                        <button onClick={() => handleCreateBL(d)} className="text-[11px] text-gold font-semibold hover:underline cursor-pointer mt-1">
+                        <button onClick={() => handleCreateBL(d)} className="text-[11px] text-[#8a6d1f] dark:text-gold font-semibold hover:underline cursor-pointer mt-1">
                           + Créer BL
                         </button>
                       )}

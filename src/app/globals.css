@@ -17,7 +17,7 @@
   --color-surface: #ffffff;
   --color-txt: #1a1a2e;
   --color-txt2: #6b7280;
-  --color-txt3: #9ca3af;
+  --color-txt3: #6b7280;
   --color-bdr: #e5e7eb;
   --color-bdr-light: #f3f4f6;
   --color-red: #c0392b;
@@ -44,7 +44,7 @@ html.dark {
   --color-surface: #1a1d27;
   --color-txt: #e5e7eb;
   --color-txt2: #9ca3af;
-  --color-txt3: #6b7280;
+  --color-txt3: #a8b0bc;
   --color-bdr: #2d3340;
   --color-bdr-light: #1f2330;
   --color-navy: #1e3a5f;

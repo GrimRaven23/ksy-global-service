@@ -55,7 +55,11 @@ export default function SettingsPage() {
         body: JSON.stringify(data),
       });
       if (res.ok) {
+        isDirty.current = false;
         setLastSaved(new Date().toLocaleTimeString("fr-FR"));
+      } else {
+        const body = await res.json().catch(() => null);
+        if (body?.error) toast.error(body.error);
       }
     } catch {
       toast.error("Erreur lors de la sauvegarde");

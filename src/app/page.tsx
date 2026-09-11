@@ -96,7 +96,7 @@ export default function Home() {
         setLoading(false);
       })
       .catch((e: unknown) => {
-        const ref = e instanceof Error ? undefined : undefined;
+        const ref = typeof e === "object" && e !== null && "reference" in e ? String((e as { reference: string }).reference) : undefined;
         setLoadError("Impossible de charger le tableau de bord.");
         setLoadRef(ref);
         setLoading(false);

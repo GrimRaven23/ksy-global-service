@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { hashPassword, generateRandomPassword } from "@/lib/auth/password";
+import { hashPassword } from "@/lib/auth/password";
 
 async function main() {
   console.log("Seeding database...");

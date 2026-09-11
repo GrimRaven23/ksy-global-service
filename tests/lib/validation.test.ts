@@ -55,6 +55,62 @@ describe("companySettingsSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("should accept empty strings for optional fields (converts to null)", () => {
+    const result = companySettingsSchema.safeParse({
+      name: "KSY",
+      email: "",
+      web: "",
+      phone: "",
+      logoUrl: "",
+      cachetUrl: "",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.email).toBeNull();
+      expect(result.data.web).toBeNull();
+      expect(result.data.phone).toBeNull();
+      expect(result.data.logoUrl).toBeNull();
+    }
+  });
+
+  it("should accept valid email", () => {
+    const result = companySettingsSchema.safeParse({
+      email: "contact@ksy.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject invalid email format", () => {
+    const result = companySettingsSchema.safeParse({
+      email: "not-an-email",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should accept valid URL for web", () => {
+    const result = companySettingsSchema.safeParse({
+      web: "https://ksy.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject invalid URL format", () => {
+    const result = companySettingsSchema.safeParse({
+      web: "not-a-url",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should accept null for nullable fields", () => {
+    const result = companySettingsSchema.safeParse({
+      address: null,
+      city: null,
+      phone: null,
+      email: null,
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("documentCreateSchema", () => {

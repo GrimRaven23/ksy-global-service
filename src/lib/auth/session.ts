@@ -3,9 +3,10 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { SessionUser, Permission } from "@/lib/types";
 import { ROLE_PERMISSIONS, ROLE_HIERARCHY } from "@/lib/types";
+import { SESSION_MAX_AGE, SESSION_MAX_AGE_PROD } from "@/lib/config/constants";
 
 const SESSION_SECRET = process.env.SESSION_SECRET || "";
-const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours
+const effectiveSessionMaxAge = process.env.NODE_ENV === "production" ? SESSION_MAX_AGE_PROD : SESSION_MAX_AGE;
 
 function sign(data: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(data).digest("hex");
@@ -40,7 +41,7 @@ export async function createSession(user: { id: string; email: string; name: str
     role: user.role,
     mustChangePassword: user.mustChangePassword || false,
     iat: now,
-    exp: now + SESSION_MAX_AGE,
+    exp: now + effectiveSessionMaxAge,
   });
   const token = createSessionToken(payload, SESSION_SECRET);
   const cookieStore = await cookies();
@@ -49,7 +50,7 @@ export async function createSession(user: { id: string; email: string; name: str
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_MAX_AGE,
+    maxAge: effectiveSessionMaxAge,
   });
 }
 

@@ -41,10 +41,15 @@ test.describe("Delivery Notes (BL)", () => {
     await expect(saveBtn).toBeVisible({ timeout: 5000 });
 
     await saveBtn.click();
-    await page.waitForTimeout(2000);
 
-    const successToast = page.locator("text=Enregistré").first();
-    const saved = await successToast.isVisible({ timeout: 5000 }).catch(() => false);
-    expect(saved || true).toBeTruthy();
+    const successToast = page.locator("[role='status']").filter({ hasText: /enregistré|saved|brouillon/i }).first();
+    const errorToast = page.locator("[role='alert']").filter({ hasText: /erreur|error/i }).first();
+
+    const result = await Promise.race([
+      successToast.waitFor({ state: "visible", timeout: 8000 }).then(() => "success" as const),
+      errorToast.waitFor({ state: "visible", timeout: 8000 }).then(() => "error" as const),
+    ]).catch(() => "timeout" as const);
+
+    expect(result).not.toBe("error");
   });
 });

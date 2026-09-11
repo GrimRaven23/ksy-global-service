@@ -50,7 +50,6 @@ jobs:
 
       - name: Check for known vulnerabilities
         run: npx audit-ci --high
-        continue-on-error: true
 
   secrets-check:
     name: Secret Scanning

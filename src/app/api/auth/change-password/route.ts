@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, createSession, destroySession } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
+import { changePasswordSchema } from "@/lib/validation";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
@@ -10,19 +11,12 @@ export async function POST(request: NextRequest) {
     const user = await requireAuth();
 
     const body = await request.json();
-    const { currentPassword, newPassword } = body as { currentPassword?: string; newPassword?: string };
-
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: "Mot de passe actuel et nouveau mot de passe requis" }, { status: 400 });
+    const parsed = changePasswordSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Mot de passe actuel et nouveau mot de passe requis (min. 8 caractères)" }, { status: 400 });
     }
 
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: "Le nouveau mot de passe doit contenir au moins 8 caractères" }, { status: 400 });
-    }
-
-    if (newPassword.length > 200) {
-      return NextResponse.json({ error: "Le mot de passe ne peut pas dépasser 200 caractères" }, { status: 400 });
-    }
+    const { currentPassword, newPassword } = parsed.data;
 
     if (currentPassword === newPassword) {
       return NextResponse.json({ error: "Le nouveau mot de passe doit être différent de l'actuel" }, { status: 400 });

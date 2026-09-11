@@ -3,6 +3,9 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { createBLFromDocSchema } from "@/lib/validation";
 import { createDeliveryNote } from "@/lib/services/delivery";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { createAuditEvent } from "@/lib/services/audit";
 import { prisma } from "@/lib/prisma";
 import { canAccessDocument } from "@/lib/authorization";

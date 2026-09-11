@@ -46,6 +46,8 @@ model User {
 
   auditEvents        AuditEvent[]
 
+  @@index([role])
+  @@index([status])
   @@map("users")
 }
 
@@ -77,6 +79,10 @@ model CompanySettings {
   currency      String   @default("XOF")
   logoUrl       String?  @map("logo_url")
   cachetUrl     String?  @map("cachet_url")
+  proformaPrefix  String @default("PF-") @map("proforma_prefix")
+  definitivePrefix String @default("FAC-") @map("definitive_prefix")
+  blPrefix       String @default("BL-") @map("bl_prefix")
+  documentFooter String? @map("document_footer")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -200,6 +206,7 @@ model Document {
   @@index([companyId])
   @@index([createdBy])
   @@index([convertedFromId])
+  @@index([companyId, status, createdAt(sort: Desc)])
   @@map("documents")
 }
 
@@ -289,6 +296,7 @@ model DeliveryNote {
   @@index([customerId])
   @@index([documentId])
   @@index([createdBy])
+  @@index([status, createdAt(sort: Desc)])
   @@map("delivery_notes")
 }
 
@@ -360,12 +368,13 @@ model AuditEvent {
   user          User?       @relation(fields: [userId], references: [id])
   details       Json?
   ipAddress     String?     @map("ip_address")
+  userAgent     String?     @map("user_agent")
   createdAt     DateTime    @default(now()) @map("created_at")
 
   @@index([action])
-  @@index([entityType, entityId])
-  @@index([userId])
-  @@index([createdAt])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
   @@map("audit_events")
 }
 

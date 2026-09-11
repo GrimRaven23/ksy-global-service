@@ -4,6 +4,9 @@ import { apiServerError } from "@/lib/api-response";
 import { createAuditEvent } from "@/lib/services/audit";
 import { z } from "zod";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const auditLogSchema = z.object({
   action: z.enum([
     "DOCUMENT_PRINTED",

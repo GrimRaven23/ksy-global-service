@@ -3,6 +3,9 @@ import { requireAuth, createSession, destroySession } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { changePasswordSchema } from "@/lib/validation";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
 

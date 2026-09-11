@@ -3,6 +3,9 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { deliveryCreateSchema, deliveryUpdateSchema } from "@/lib/validation";
 import { createDeliveryNote, updateDeliveryNote, listDeliveryNotes, deleteDeliveryNote, getDeliveryNote } from "@/lib/services/delivery";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { createAuditEvent } from "@/lib/services/audit";
 import { canAccessDeliveryNote, canEditDeliveryNote, canConfirmDeliveryNote } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";

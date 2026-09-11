@@ -3,6 +3,9 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { documentCreateSchema, documentUpdateSchema } from "@/lib/validation";
 import { createDocument, updateDocument, listDocuments, deleteDocument, getDocument } from "@/lib/services/documents";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { createAuditEvent } from "@/lib/services/audit";
 import { canAccessDocument, canEditDocument, canDeleteDocument, canFinalizeDocument, canCancelDocument } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";

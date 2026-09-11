@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword, hashPassword, needsRehash } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { loginSchema } from "@/lib/validation";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { createAuditEvent } from "@/lib/services/audit";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { logger } from "@/lib/logging";

@@ -7,10 +7,14 @@ const TEST_EMAIL = process.env.TEST_EMAIL || "admin@ksy-global.com";
 const TEST_PASSWORD = process.env.TEST_PASSWORD || "Admin@12345";
 const OWNER_NAME = "Administrateur KSY";
 
+const ITERATIONS = 310000;
+const KEY_LENGTH = 64;
+const DIGEST = "sha512";
+
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512");
-  return `${salt}:${hash.toString("hex")}`;
+  const hash = crypto.pbkdf2Sync(password, salt, ITERATIONS, KEY_LENGTH, DIGEST);
+  return `pbkdf2$${ITERATIONS}$${salt}$${hash.toString("hex")}`;
 }
 
 async function main() {

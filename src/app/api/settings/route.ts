@@ -3,6 +3,9 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { companySettingsSchema } from "@/lib/validation";
 import { getCompany, updateCompany } from "@/lib/services/company";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { createAuditEvent } from "@/lib/services/audit";
 
 const SENSITIVE_FIELDS = ["bank", "bkName", "iban", "swift", "compte", "rccm", "ninea", "ifu"];

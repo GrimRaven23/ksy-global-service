@@ -3,6 +3,9 @@ import { requireAuth, hasPermission, canManageRole } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { hashPassword, generateRandomPassword } from "@/lib/auth/password";
 import { userCreateSchema, userUpdateSchema } from "@/lib/validation";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { createAuditEvent } from "@/lib/services/audit";
 import type { AuditAction } from "@prisma/client";

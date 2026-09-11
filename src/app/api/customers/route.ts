@@ -3,6 +3,9 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { customerSchema } from "@/lib/validation";
 import { createAuditEvent } from "@/lib/services/audit";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { canAccessCustomer } from "@/lib/authorization";
 

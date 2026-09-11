@@ -118,11 +118,14 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === "/api/auth/login" && request.method === "POST") {
     const ip = getClientIp(request);
-    const { allowed, retryAfter } = checkRateLimit(`login:${ip}`, 5, 10 * 60 * 1000);
+    const { allowed, retryAfter, limit, resetAt } = checkRateLimit(`login:${ip}`, 5, 10 * 60 * 1000);
     if (!allowed) {
       console.warn(`Rate limit exceeded for login from IP: ${ip}`);
       const resp = NextResponse.json({ ok: false, error: "Trop de requêtes. Réessayez plus tard." }, { status: 429 });
       resp.headers.set("Retry-After", Math.ceil(retryAfter).toString());
+      resp.headers.set("X-RateLimit-Limit", limit.toString());
+      resp.headers.set("X-RateLimit-Remaining", "0");
+      resp.headers.set("X-RateLimit-Reset", Math.ceil(resetAt / 1000).toString());
       addSecurityHeaders(resp, nonce);
       return resp;
     }
@@ -130,10 +133,13 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/") && !pathname.startsWith("/api/health")) {
     const ip = getClientIp(request);
-    const { allowed, retryAfter } = checkRateLimit(`api:${ip}`, 100, 60 * 1000);
+    const { allowed, retryAfter, limit, resetAt } = checkRateLimit(`api:${ip}`, 100, 60 * 1000);
     if (!allowed) {
       const resp = NextResponse.json({ ok: false, error: "Trop de requêtes. Réessayez plus tard." }, { status: 429 });
       resp.headers.set("Retry-After", Math.ceil(retryAfter).toString());
+      resp.headers.set("X-RateLimit-Limit", limit.toString());
+      resp.headers.set("X-RateLimit-Remaining", "0");
+      resp.headers.set("X-RateLimit-Reset", Math.ceil(resetAt / 1000).toString());
       addSecurityHeaders(resp, nonce);
       return resp;
     }
@@ -178,7 +184,8 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/")) {
-    if (!validateCsrf(request, request.cookies)) {
+    const isRead = request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS";
+    if (!isRead && !validateCsrf(request, request.cookies)) {
       const resp = NextResponse.json({ ok: false, error: "Token CSRF invalide — rechargez la page" }, { status: 403 });
       addSecurityHeaders(resp, nonce);
       return resp;

@@ -4,6 +4,9 @@ import { destroySession, getSessionUser } from "@/lib/auth/session";
 import { createAuditEvent } from "@/lib/services/audit";
 import { getCsrfCookieName } from "@/lib/csrf-server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   const user = await getSessionUser().catch(() => null);
   await destroySession();

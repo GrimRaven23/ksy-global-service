@@ -3,6 +3,9 @@ import { requireAuth, hasPermission } from "@/lib/auth/session";
 import { apiServerError } from "@/lib/api-response";
 import { convertDocumentSchema } from "@/lib/validation";
 import { convertProformaToDefinitive } from "@/lib/services/documents";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { createAuditEvent } from "@/lib/services/audit";
 import { canAccessDocument } from "@/lib/authorization";
 

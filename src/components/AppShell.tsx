@@ -238,6 +238,9 @@ export default function AppShell({ children, hideNav = false }: { children: Reac
 
   return (
     <div className="min-h-screen bg-bg">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-gold focus:text-navy focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold focus:outline-none focus:ring-2 focus:ring-navy">
+        Aller au contenu principal
+      </a>
       {offline && <OfflineBanner />}
       {!hideNav && health === "degraded" && (
         <div role="alert" className="flex items-center justify-center gap-2 bg-red text-white text-xs font-semibold px-4 py-2">

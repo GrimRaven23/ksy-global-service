@@ -7,13 +7,15 @@ Système de gestion documentaire pour **KSY GLOBAL SERVICE** — Factures Pro Fo
 - **Factures Pro Forma** — Création, impression, finalisation
 - **Factures Définitives** — Création, impression, mode Livraison avec création automatique de BL
 - **Bons de Livraison** — Création, impression 1 ou 2 exemplaires (Client + KSY)
-- **Tableau de bord** — Vue d'ensemble des documents récents
-- **Journal d'audit** — Traçabilité complète de toutes les actions
-- **Gestion des utilisateurs** — 7 rôles avec permissions granulaires
-- **Paramètres entreprise** — Informations société, banque, TVA (auto-save)
+- **Tableau de bord** — Vue d'ensemble avec stats (revenus du mois, documents en brouillon, BL en attente)
+- **Journal d'audit** — Traçabilité complète de toutes les actions (10 dernières sur dashboard)
+- **Gestion des utilisateurs** — 11 rôles avec permissions granulaires
+- **Paramètres entreprise** — Informations société, banque, TVA, préfixes document, pied de page (auto-save)
 - **Impression A4** — Templates premium avec en-tête/pied KSY, décorations, blocs signature
-- **Authentification sécurisée** — Sessions HMAC-SHA256, cookies HttpOnly
-- **RBAC** — 7 rôles, 26 permissions, vérification côté serveur
+- **Authentification sécurisée** — Sessions HMAC-SHA256, cookies HttpOnly, PBKDF2 310k itérations
+- **RBAC** — 11 rôles, 26 permissions, vérification côté serveur
+- **Sécurité** — CSRF double-submit, CSP nonce, rate limiting, headers de sécurité
+- **Observabilité** — Health check (/api/health), diagnostics (/api/diagnostics), journal d'audit
 
 ## Stack technique
 
@@ -266,6 +268,9 @@ ksy-next/
 | `npm run start` | Lancer la production en local |
 | `npm run lint` | Vérifier le code avec ESLint |
 | `npm run typecheck` | Vérifier les types TypeScript |
+| `npm test` | Exécuter les tests unitaires (vitest) |
+| `npm run test:e2e` | Exécuter les tests E2E (Playwright) |
+| `npm run test:a11y` | Tests d'accessibilité (axe-core) |
 | `npx prisma generate` | Générer le client Prisma |
 | `npx prisma db push` | Pousser le schéma vers la BDD |
 | `npx prisma migrate dev` | Créer une migration |
@@ -280,10 +285,15 @@ ksy-next/
 |------|-------------|-------------|
 | **OWNER** | Propriétaire | Accès complet (26 permissions) |
 | **IT_ADMIN** | Admin technique | Gestion technique (14 permissions) |
+| **DEVELOPER** | Développeur | Accès technique + lecture (12 permissions) |
 | **ADMIN** | Admin business | Gestion métier (17 permissions) |
+| **ACCOUNTANT** | Comptable | Documents + clients (10 permissions) |
 | **SALES** | Vente | CRUD documents + clients (12 permissions) |
 | **ASSISTANT** | Assistant | Documents limités (9 permissions) |
+| **PROJECT_MANAGER** | Chef de projet | Documents + livraison (11 permissions) |
 | **DELIVERY** | Livreur | Livraison + lecture (5 permissions) |
+| **WAREHOUSE** | Magasinier | Livraison + lecture (5 permissions) |
+| **COMPLIANCE** | Conformité | Lecture complète (6 permissions) |
 | **VIEWER** | Lecteur | Lecture seule (4 permissions) |
 
 ---
@@ -305,13 +315,17 @@ ksy-next/
 
 ## Sécurité
 
-- **Authentification** : Sessions HMAC-SHA256, cookies HttpOnly, expiration 8h
-- **Autorisation** : RBAC 7 rôles, 26 permissions, vérifié sur chaque API
-- **Validation** : Schémas Zod sur toutes les entrées
-- **Headers** : CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- **Mots de passe** : PBKDF2, 100k itérations, sel aléatoire, SHA-512
-- **Audit** : Traçabilité complète de toutes les actions
+- **Authentification** : Sessions HMAC-SHA256, cookies HttpOnly, expiration 4h (prod) / 8h (dev)
+- **Mots de passe** : PBKDF2 310k itérations, SHA-512, réhash transparent au login
+- **Autorisation** : RBAC 11 rôles, 26 permissions, vérifié sur chaque API
+- **CSRF** : Double-submit cookie pattern, SameSite Strict, constant-time compare
+- **Validation** : Schémas Zod sur toutes les entrées (server + client)
+- **Headers** : CSP nonce, HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff
+- **Rate limiting** : Login 5/10min, API 100/min (Edge-compatible, per-instance)
+- **Audit** : Traçabilité complète avec IP, userAgent, détails JSON
 - **Secrets** : Variables d'environnement, `.env` exclu du git
+- **Runtime** : Toutes les routes API en `nodejs` (pas Edge) pour Prisma
+- **Base de données** : Connection pooling via Supabase PgBouncer, SSL requis
 
 ---
 

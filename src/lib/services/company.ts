@@ -12,6 +12,7 @@ export async function updateCompany(data: Record<string, unknown>) {
     "name", "slogan", "activite", "address", "city", "phone", "phone2",
     "email", "web", "rccm", "ninea", "ifu", "bank", "bkName", "iban",
     "swift", "compte", "tvaDefault", "tvaRate", "currency", "logoUrl", "cachetUrl",
+    "proformaPrefix", "definitivePrefix", "blPrefix", "documentFooter",
   ];
   const filtered: Record<string, unknown> = {};
   for (const key of allowed) {

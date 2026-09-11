@@ -56,6 +56,10 @@ export const companySettingsSchema = z.object({
   currency: z.string().max(10).optional(),
   logoUrl: urlOrNull,
   cachetUrl: urlOrNull,
+  proformaPrefix: z.string().max(20).optional(),
+  definitivePrefix: z.string().max(20).optional(),
+  blPrefix: z.string().max(20).optional(),
+  documentFooter: z.string().max(500).nullable().optional(),
 });
 
 // ═══════════════════════════════════════════════════════════════

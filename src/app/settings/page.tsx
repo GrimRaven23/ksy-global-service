@@ -15,6 +15,8 @@ interface Company {
   rccm: string; ninea: string; ifu: string;
   bank: string; bkName: string; iban: string; swift: string; compte: string;
   tvaDefault: string; tvaRate: number; currency: string;
+  proformaPrefix: string; definitivePrefix: string; blPrefix: string;
+  documentFooter: string;
 }
 
 const DEFAULT: Company = {
@@ -23,6 +25,8 @@ const DEFAULT: Company = {
   rccm: "", ninea: "", ifu: "",
   bank: "", bkName: "", iban: "", swift: "", compte: "",
   tvaDefault: "non", tvaRate: 18, currency: "XOF",
+  proformaPrefix: "PF-", definitivePrefix: "FAC-", blPrefix: "BL-",
+  documentFooter: "",
 };
 
 export default function SettingsPage() {
@@ -147,6 +151,14 @@ export default function SettingsPage() {
                 />
                 <Field label="Taux TVA (%)" value={String(company.tvaRate)} onChange={(v) => update("tvaRate", Number(v) || 0)} type="number" min="0" max="100" />
                 <Field label="Devise" value={company.currency} onChange={(v) => update("currency", v)} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                <Field label="Préfixe Pro Forma" value={company.proformaPrefix} onChange={(v) => update("proformaPrefix", v)} placeholder="PF-" />
+                <Field label="Préfixe Facture" value={company.definitivePrefix} onChange={(v) => update("definitivePrefix", v)} placeholder="FAC-" />
+                <Field label="Préfixe BL" value={company.blPrefix} onChange={(v) => update("blPrefix", v)} placeholder="BL-" />
+              </div>
+              <div className="mt-4">
+                <Field label="Pied de page des documents" value={company.documentFooter} onChange={(v) => update("documentFooter", v)} placeholder="Merci pour votre confiance" />
               </div>
             </Card>
           </div>

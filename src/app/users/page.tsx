@@ -195,7 +195,7 @@ export default function UsersPage() {
                         </td>
                         <td className="py-2.5"><Badge color={roleColor(u.role)}>{roleLabel(u.role)}</Badge></td>
                         <td className="py-2.5">
-                          <Badge color={u.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}>
+                          <Badge color={u.status === "ACTIVE" ? "bg-green-100 text-green-700 dark:bg-green/20 dark:text-green-300" : "bg-red-100 text-red-600 dark:bg-red/20 dark:text-red-300"}>
                             {u.status === "ACTIVE" ? "Actif" : "Désactivé"}
                           </Badge>
                         </td>

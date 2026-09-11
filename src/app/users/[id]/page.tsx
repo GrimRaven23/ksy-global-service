@@ -188,7 +188,7 @@ export default function UserDetailPage() {
                     <p className="text-xs sm:text-sm text-txt2 dark:text-white/60">{targetUser.email}</p>
                     <div className="flex gap-2 mt-1">
                       <Badge color={roleColor(targetUser.role)}>{roleLabel(targetUser.role)}</Badge>
-                      <Badge color={targetUser.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                      <Badge color={targetUser.status === "ACTIVE" ? "bg-green-100 text-green-700 dark:bg-green/20 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red/20 dark:text-red-300"}>
                         {targetUser.status === "ACTIVE" ? "Actif" : "Désactivé"}
                       </Badge>
                     </div>

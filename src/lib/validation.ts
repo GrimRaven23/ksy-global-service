@@ -233,3 +233,8 @@ export const convertDocumentSchema = z.object({
   documentId: z.string().min(1),
   saleMode: z.enum(["DIRECTE", "LIVRAISON"]).optional(),
 });
+
+export const duplicateDocumentSchema = z.object({
+  documentId: z.string().min(1),
+  type: z.enum(["PROFORMA", "DEFINITIVE"]).optional(),
+});

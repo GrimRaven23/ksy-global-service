@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, ChevronDown, ChevronRight } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, Download } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Card, Badge, SearchInput, Pagination, Avatar, SkeletonTable, EmptyState, PageHeader } from "@/components/ui";
 import { relativeTime } from "@/lib/document-helpers";
@@ -18,20 +18,20 @@ interface AuditEvent {
 }
 
 const actionColors: Record<string, string> = {
-  LOGIN_SUCCESS: "bg-green-100 text-green-700",
-  LOGIN_FAILURE: "bg-red-100 text-red-600",
-  USER_CREATED: "bg-blue-100 text-blue-700",
-  USER_DISABLED: "bg-red-100 text-red-600",
-  USER_UPDATED: "bg-blue-100 text-blue-700",
-  ROLE_CHANGED: "bg-purple-100 text-purple-700",
-  DOCUMENT_CREATED: "bg-green-100 text-green-700",
-  DOCUMENT_UPDATED: "bg-blue-100 text-blue-700",
-  DOCUMENT_FINALIZED: "bg-navy/10 text-navy dark:bg-navy/20 dark:text-white",
-  DOCUMENT_DELETED: "bg-red-100 text-red-600",
-  DELIVERY_NOTE_CREATED: "bg-green-100 text-green-700",
-  DELIVERY_NOTE_UPDATED: "bg-blue-100 text-blue-700",
-  DELIVERY_NOTE_DELETED: "bg-red-100 text-red-600",
-  COMPANY_SETTINGS_UPDATED: "bg-amber-100 text-amber-700",
+  LOGIN_SUCCESS: "bg-green-100 text-green-700 dark:bg-green/20 dark:text-green-300",
+  LOGIN_FAILURE: "bg-red-100 text-red-600 dark:bg-red/20 dark:text-red-300",
+  USER_CREATED: "bg-blue-100 text-blue-700 dark:bg-blue/20 dark:text-blue-300",
+  USER_DISABLED: "bg-red-100 text-red-600 dark:bg-red/20 dark:text-red-300",
+  USER_UPDATED: "bg-blue-100 text-blue-700 dark:bg-blue/20 dark:text-blue-300",
+  ROLE_CHANGED: "bg-purple-100 text-purple-700 dark:bg-purple/20 dark:text-purple-300",
+  DOCUMENT_CREATED: "bg-green-100 text-green-700 dark:bg-green/20 dark:text-green-300",
+  DOCUMENT_UPDATED: "bg-blue-100 text-blue-700 dark:bg-blue/20 dark:text-blue-300",
+  DOCUMENT_FINALIZED: "bg-navy/10 text-navy dark:bg-navy/30 dark:text-white",
+  DOCUMENT_DELETED: "bg-red-100 text-red-600 dark:bg-red/20 dark:text-red-300",
+  DELIVERY_NOTE_CREATED: "bg-green-100 text-green-700 dark:bg-green/20 dark:text-green-300",
+  DELIVERY_NOTE_UPDATED: "bg-blue-100 text-blue-700 dark:bg-blue/20 dark:text-blue-300",
+  DELIVERY_NOTE_DELETED: "bg-red-100 text-red-600 dark:bg-red/20 dark:text-red-300",
+  COMPANY_SETTINGS_UPDATED: "bg-amber-100 text-amber-700 dark:bg-amber/20 dark:text-amber-300",
 };
 
 const actionLabels: Record<string, string> = {
@@ -51,12 +51,20 @@ const actionLabels: Record<string, string> = {
   DELIVERY_NOTE_DELETED: "BL supprimé",
 };
 
+const actionOptions = [
+  { value: "", label: "Toutes les actions" },
+  ...Object.entries(actionLabels).map(([value, label]) => ({ value, label })),
+];
+
 export default function AuditPage() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [entityType, setEntityType] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const limit = 20;
@@ -66,6 +74,9 @@ export default function AuditPage() {
     setLoading(true);
     const params = new URLSearchParams({ limit: String(limit), offset: String(page * limit) });
     if (entityType) params.set("entityType", entityType);
+    if (actionFilter) params.set("action", actionFilter);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
 
     csrfFetch(`/api/audit?${params}`)
       .then((r) => r.json())
@@ -75,7 +86,7 @@ export default function AuditPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [page, entityType]);
+  }, [page, entityType, actionFilter, dateFrom, dateTo]);
 
   const filtered = events.filter((e) => {
     if (!search) return true;
@@ -83,6 +94,15 @@ export default function AuditPage() {
     const label = actionLabels[e.action] || e.action;
     return label.toLowerCase().includes(q) || e.action.toLowerCase().includes(q) || (e.user?.name || "").toLowerCase().includes(q);
   });
+
+  const handleExportCSV = () => {
+    const params = new URLSearchParams({ format: "csv", limit: "5000" });
+    if (entityType) params.set("entityType", entityType);
+    if (actionFilter) params.set("action", actionFilter);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
+    window.open(`/api/audit?${params}`, "_blank");
+  };
 
   return (
     <AppShell>
@@ -95,6 +115,12 @@ export default function AuditPage() {
           <div className="flex-1">
             <SearchInput value={search} onChange={setSearch} placeholder="Rechercher une action..." />
           </div>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-surface border border-bdr rounded-md text-[11px] font-semibold text-navy dark:text-white hover:border-navy/30 transition-colors cursor-pointer min-h-[32px]"
+          >
+            <Download className="w-3.5 h-3.5" /> Exporter CSV
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -109,6 +135,44 @@ export default function AuditPage() {
               {et.label}
             </button>
           ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            value={actionFilter}
+            onChange={(e) => { setActionFilter(e.target.value); setPage(0); }}
+            className="px-2.5 py-1.5 bg-white dark:bg-surface border border-bdr rounded text-[11px] font-semibold text-navy dark:text-white focus:outline-none focus:border-navy cursor-pointer min-h-[32px]"
+          >
+            {actionOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-txt2 font-semibold">Du</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+              className="px-2 py-1.5 bg-white dark:bg-surface border border-bdr rounded text-[11px] text-navy dark:text-white focus:outline-none focus:border-navy cursor-pointer min-h-[32px]"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-txt2 font-semibold">au</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+              className="px-2 py-1.5 bg-white dark:bg-surface border border-bdr rounded text-[11px] text-navy dark:text-white focus:outline-none focus:border-navy cursor-pointer min-h-[32px]"
+            />
+          </div>
+          {(dateFrom || dateTo || actionFilter) && (
+            <button
+              onClick={() => { setDateFrom(""); setDateTo(""); setActionFilter(""); setPage(0); }}
+              className="px-2.5 py-1.5 text-[11px] font-semibold text-txt2 hover:text-txt rounded cursor-pointer min-h-[32px]"
+            >
+              Réinitialiser filtres
+            </button>
+          )}
         </div>
 
         <Card>
@@ -141,7 +205,7 @@ export default function AuditPage() {
                         </td>
                         <td className="py-2.5 text-xs text-txt2 whitespace-nowrap">{relativeTime(e.createdAt)}</td>
                         <td className="py-2.5">
-                          <Badge color={actionColors[e.action] || "bg-gray-100 text-gray-600"}>
+                          <Badge color={actionColors[e.action] || "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400"}>
                             {actionLabels[e.action] || e.action.replace(/_/g, " ")}
                           </Badge>
                           <span className="text-[9px] text-txt2 block sm:hidden mt-0.5">{e.entityType}{e.entityNum ? ` • ${e.entityNum}` : ""}</span>
@@ -162,7 +226,7 @@ export default function AuditPage() {
                       </tr>
                       {expanded === e.id && (
                         <tr key={`${e.id}-detail`}>
-                          <td colSpan={5} className="px-4 py-3 bg-gray-50/50">
+                          <td colSpan={5} className="px-4 py-3 bg-gray-50/50 dark:bg-white/5">
                             <pre className="text-[10px] text-txt2 font-mono whitespace-pre-wrap break-words">
                               {JSON.stringify(e.details || {}, null, 2)}
                             </pre>

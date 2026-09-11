@@ -55,7 +55,7 @@ export function Button({
 // ─── Badge ───────────────────────────────────────────────────
 export function Badge({
   children,
-  color = "bg-gray-100 text-gray-600",
+  color = "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-400",
   className = "",
 }: {
   children: React.ReactNode;
@@ -154,7 +154,7 @@ export function Field({
         className={`w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none disabled:opacity-40 disabled:bg-gray-50 dark:disabled:bg-white/5 bg-white dark:bg-surface ${
           error
             ? "border-red focus:border-red focus:ring-2 focus:ring-red/10"
-            : "border-bdr focus:border-navy focus:ring-2 focus:ring-navy/10 hover:border-gray-400"
+            : "border-bdr focus:border-navy focus:ring-2 focus:ring-navy/10 hover:border-bdr"
         }`}
       />
       {error && <p id={`${fieldId}-error`} className="text-[11px] text-red mt-1 flex items-center gap-1" role="alert">{error}</p>}
@@ -188,7 +188,7 @@ export function Select({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-40 disabled:bg-gray-50 dark:disabled:bg-white/5 bg-white dark:bg-surface hover:border-gray-400 cursor-pointer"
+        className="w-full px-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-40 disabled:bg-gray-50 dark:disabled:bg-white/5 bg-white dark:bg-surface hover:border-bdr cursor-pointer"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -299,7 +299,7 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-9 pr-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 bg-white dark:bg-surface hover:border-gray-400"
+        className="w-full pl-9 pr-3 py-2 border border-bdr rounded-lg text-sm transition-colors focus:outline-none focus:border-navy focus:ring-2 focus:ring-navy/10 bg-white dark:bg-surface hover:border-bdr"
       />
     </div>
   );
@@ -333,7 +333,7 @@ export function Pagination({
       <button
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
-        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-400 disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-bdr disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -347,7 +347,7 @@ export function Pagination({
             className={`min-w-[34px] h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               p === page
                 ? "bg-navy text-white shadow-sm"
-                : "border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-400"
+                : "border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-bdr"
             }`}
           >
             {p}
@@ -357,7 +357,7 @@ export function Pagination({
       <button
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
-        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-400 disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+        className="p-2 rounded-lg border border-bdr text-txt2 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-bdr disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
       >
         <ChevronRight className="w-4 h-4" />
       </button>
@@ -445,7 +445,7 @@ export function FilterPills({
                 className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
                   group.selected === opt.value
                     ? "bg-navy text-white border-navy shadow-sm"
-                    : "bg-white dark:bg-surface text-txt2 border-bdr hover:border-gray-400 hover:text-txt"
+                    : "bg-white dark:bg-surface text-txt2 border-bdr hover:border-bdr hover:text-txt"
                 }`}
               >
                 {opt.label}

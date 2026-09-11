@@ -277,6 +277,36 @@ export async function deleteDocument(id: string) {
   return prisma.document.delete({ where: { id } });
 }
 
+export async function duplicateDocument(
+  sourceId: string,
+  options?: { type?: "PROFORMA" | "DEFINITIVE"; userId?: string }
+) {
+  const source = await prisma.document.findUnique({
+    where: { id: sourceId },
+    include: { items: true },
+  });
+  if (!source) throw new Error("Document source introuvable");
+
+  return createDocument({
+    type: options?.type || source.type,
+    ref: source.ref || undefined,
+    saleMode: source.saleMode,
+    tvaOn: source.tvaOn,
+    tvaRate: Number(source.tvaRate),
+    customerId: source.customerId || undefined,
+    customerName: source.customerName || undefined,
+    customerAddr: source.customerAddr || undefined,
+    customerPhone: source.customerPhone || undefined,
+    customerEmail: source.customerEmail || undefined,
+    items: source.items.map((item) => ({
+      designation: item.designation,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+    })),
+    userId: options?.userId,
+  });
+}
+
 export async function convertProformaToDefinitive(
   proformaId: string,
   options?: { saleMode?: "DIRECTE" | "LIVRAISON"; userId?: string }

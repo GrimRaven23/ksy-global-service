@@ -9,7 +9,7 @@ import { Card, SectionTitle, Field, Button, StatusBadge } from "@/components/ui"
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Company, DEFAULT_COMPANY } from "@/lib/company-defaults";
-import { Save } from "lucide-react";
+import { Save, Copy, UserPlus } from "lucide-react";
 import { csrfFetch } from "@/lib/csrf";
 
 interface Product {
@@ -28,6 +28,7 @@ interface DocData {
   status: string;
   tvaOn: boolean;
   tvaRate: number;
+  customerId?: string;
   clientName: string;
   clientPhone: string;
   clientEmail: string;
@@ -77,6 +78,9 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
 
   const isPF = type === "pf";
   const prefix = isPF ? "PF" : "FAC";
+  const [showQuickCustomer, setShowQuickCustomer] = useState(false);
+  const [quickCustomer, setQuickCustomer] = useState({ name: "", phone: "", email: "", address: "" });
+  const [savingCustomer, setSavingCustomer] = useState(false);
   const docNum = doc.num || `${prefix}-${curYear()}-${padN(1)}`;
   const isDraft = doc.status === "DRAFT";
 
@@ -109,6 +113,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
           clientPhone: existing.customerPhone || existing.customer?.phone || "",
           clientEmail: existing.customerEmail || existing.customer?.email || "",
           clientAddr: existing.customerAddr || existing.customer?.address || "",
+          customerId: existing.customerId || existing.customer?.id || "",
           products: existing.items?.map((item: { designation: string; quantity: number | string; unitPrice: number | string }) => ({
             designation: item.designation,
             quantity: String(item.quantity),
@@ -179,6 +184,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     saleMode: isPF ? undefined : data.saleMode.toUpperCase(),
     tvaOn: data.tvaOn,
     tvaRate: data.tvaRate,
+    customerId: data.customerId || undefined,
     customerName: data.clientName || undefined,
     customerAddr: data.clientAddr || undefined,
     customerPhone: data.clientPhone || undefined,
@@ -349,6 +355,70 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
     }
   };
 
+  const handleDuplicate = async () => {
+    if (!doc.id) return;
+    const ok = await confirm("Dupliquer ce document comme brouillon ?");
+    if (!ok) return;
+    try {
+      const res = await csrfFetch("/api/documents/duplicate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: doc.id }),
+      });
+      const data = await res.json();
+      if (data.id) {
+        toast.success(`Document dupliqué : ${data.num}`);
+        router.push(`/${isPF ? "proforma" : "definitive"}?id=${data.id}`);
+      } else {
+        toast.error(data.error || "Erreur lors de la duplication.");
+      }
+    } catch {
+      toast.error("Erreur réseau.");
+    }
+  };
+
+  const handleQuickCreateCustomer = async () => {
+    if (!quickCustomer.name.trim()) {
+      toast.error("Le nom du client est requis.");
+      return;
+    }
+    setSavingCustomer(true);
+    try {
+      const res = await csrfFetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: quickCustomer.name.trim(),
+          phone: quickCustomer.phone.trim() || null,
+          email: quickCustomer.email.trim() || null,
+          address: quickCustomer.address.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.id) {
+        setDoc((prev) => ({
+          ...prev,
+          customerId: data.id,
+          clientName: data.name,
+          clientPhone: data.phone || "",
+          clientEmail: data.email || "",
+          clientAddr: data.address || "",
+        }));
+        isDirty.current = true;
+        setShowQuickCustomer(false);
+        setQuickCustomer({ name: "", phone: "", email: "", address: "" });
+        toast.success("Client créé et lié au document.");
+      } else {
+        const err = await res.json().catch(() => ({ error: "Erreur lors de la création" }));
+        toast.error(err.error || "Erreur lors de la création du client.");
+      }
+    } catch {
+      toast.error("Erreur réseau.");
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
+
   const handleNew = async () => {
     const ok = await confirm("Créer un nouveau document ? Les données non sauvegardées seront perdues.");
     if (!ok) return;
@@ -468,6 +538,11 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
               <button onClick={handleNew} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:block">
                 Nouvelle
               </button>
+              {doc.id && (
+                <button onClick={handleDuplicate} className="bg-white dark:bg-surface text-navy dark:text-white border border-navy px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-xs font-semibold cursor-pointer hover:bg-navy/5 hidden sm:flex items-center gap-1">
+                  <Copy className="w-3.5 h-3.5" /> Dupliquer
+                </button>
+              )}
               <Button variant="primary" size="sm" loading={isSaving} onClick={handleSave} disabled={!isDraft}>
                 <Save className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Enregistrer</span>
               </Button>
@@ -551,7 +626,57 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
 
             {/* Client */}
             <Card>
-              <SectionTitle>Client</SectionTitle>
+              <div className="flex items-center justify-between -mt-4 -mx-4 mb-3.5 px-4 py-2 bg-navy rounded-t-[10px]">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-white">Client</span>
+                {isDraft && (
+                  <button
+                    onClick={() => setShowQuickCustomer(!showQuickCustomer)}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-gold hover:text-gold-lt transition-colors cursor-pointer"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" /> Nouveau client
+                  </button>
+                )}
+              </div>
+              {showQuickCustomer && (
+                <div className="mb-3 p-3 bg-navy/[0.04] dark:bg-white/5 border border-navy/10 dark:border-white/10 rounded-lg space-y-2">
+                  <input
+                    type="text"
+                    value={quickCustomer.name}
+                    onChange={(e) => setQuickCustomer((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nom / Société *"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-surface border border-bdr rounded text-xs focus:outline-none focus:border-navy"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={quickCustomer.phone}
+                      onChange={(e) => setQuickCustomer((p) => ({ ...p, phone: e.target.value }))}
+                      placeholder="Téléphone"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-surface border border-bdr rounded text-xs focus:outline-none focus:border-navy"
+                    />
+                    <input
+                      type="email"
+                      value={quickCustomer.email}
+                      onChange={(e) => setQuickCustomer((p) => ({ ...p, email: e.target.value }))}
+                      placeholder="Email"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-surface border border-bdr rounded text-xs focus:outline-none focus:border-navy"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={quickCustomer.address}
+                    onChange={(e) => setQuickCustomer((p) => ({ ...p, address: e.target.value }))}
+                    placeholder="Adresse"
+                    className="w-full px-2.5 py-1.5 bg-white dark:bg-surface border border-bdr rounded text-xs focus:outline-none focus:border-navy"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setShowQuickCustomer(false)} className="px-3 py-1 text-[11px] font-semibold text-txt2 hover:text-txt rounded cursor-pointer">Annuler</button>
+                    <button onClick={handleQuickCreateCustomer} disabled={savingCustomer} className="px-3 py-1 text-[11px] font-semibold text-white bg-navy rounded cursor-pointer hover:bg-navy-l disabled:opacity-50">
+                      {savingCustomer ? "Création..." : "Créer et lier"}
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Nom / Société" value={doc.clientName} placeholder="Nom du client" onChange={(v) => updateField("clientName", v)} disabled={!isDraft} />
                 <Field label="Téléphone" value={doc.clientPhone} placeholder="+221 77 000 00 00" onChange={(v) => updateField("clientPhone", v)} disabled={!isDraft} />
@@ -656,7 +781,7 @@ export default function DocumentEditor({ type }: { type: "pf" | "df" }) {
                   <span className="font-bold text-navy dark:text-white">{fmtNum(calc.subtotal)} F</span>
                 </div>
                 {doc.tvaOn && (
-                  <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50 bg-gray-50">
+                  <div className="flex justify-between px-3 py-2 text-xs border-b border-bdr/50 bg-gray-50 dark:bg-white/5">
                     <span className="font-medium text-txt2">TVA ({calc.rate}%)</span>
                     <span className="font-bold text-navy dark:text-white">{fmtNum(calc.tva)} F</span>
                   </div>

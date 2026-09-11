@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Trash2, Copy } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Card, Badge, SearchInput, SkeletonTable, EmptyState, PageHeader, FilterPills, StatusBadge, ErrorState } from "@/components/ui";
 import { typeLabel, typeColor, statusLabel, relativeTime } from "@/lib/document-helpers";
@@ -158,6 +158,25 @@ export default function DocumentsPage() {
     }
   };
 
+  const handleDuplicate = async (doc: Doc) => {
+    if (doc.type === "BL") return;
+    const ok = await confirm(`Dupliquer « ${doc.num} » comme brouillon ?`);
+    if (!ok) return;
+    const res = await csrfFetch("/api/documents/duplicate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId: doc.id }),
+    });
+    if (res.ok) {
+      const copy = await res.json();
+      toast.success(`Document dupliqué : ${copy.num}`);
+      router.push(`/${doc.type === "PROFORMA" ? "proforma" : "definitive"}?id=${copy.id}`);
+    } else {
+      const err = await res.json().catch(() => ({ error: "Erreur lors de la duplication" }));
+      toast.error(err.error || "Erreur lors de la duplication");
+    }
+  };
+
   return (
     <AppShell>
       <PageHeader title="Tous les documents" backHref="/">
@@ -242,10 +261,10 @@ export default function DocumentsPage() {
                           <td className="py-2.5">
                             <StatusBadge status={d.status} label={statusLabel(d.status)} />
                             {d.convertedFrom && (
-                              <button onClick={() => router.push(`/proforma?id=${d.convertedFrom!.id}`)} className="text-[10px] text-purple-700 hover:underline block mt-0.5 cursor-pointer">de {d.convertedFrom.num}</button>
+                              <button onClick={() => router.push(`/proforma?id=${d.convertedFrom!.id}`)} className="text-[10px] text-purple-700 dark:text-purple-300 hover:underline block mt-0.5 cursor-pointer">de {d.convertedFrom.num}</button>
                             )}
                             {d.conversions && d.conversions.length > 0 && d.conversions[0] && (
-                              <button onClick={() => router.push(`/definitive?id=${d.conversions![0]!.id}`)} className="text-[10px] text-purple-700 hover:underline block mt-0.5 cursor-pointer">→ {d.conversions[0].num}</button>
+                              <button onClick={() => router.push(`/definitive?id=${d.conversions![0]!.id}`)} className="text-[10px] text-purple-700 dark:text-purple-300 hover:underline block mt-0.5 cursor-pointer">→ {d.conversions[0].num}</button>
                             )}
                           </td>
                           <td className="py-2.5 text-[11px] hidden lg:table-cell">
@@ -264,6 +283,11 @@ export default function DocumentsPage() {
                           <td className="py-2.5 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button onClick={() => openDoc(d)} className="text-[11px] sm:text-xs text-navy dark:text-white font-semibold hover:underline cursor-pointer">Ouvrir</button>
+                              {d.type !== "BL" && (
+                                <button onClick={() => handleDuplicate(d)} className="p-2 text-navy/50 dark:text-white/40 hover:text-navy dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-navy/5 dark:hover:bg-white/5" aria-label="Dupliquer ce document">
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button onClick={() => handleDelete(d)} className="p-2 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -290,9 +314,16 @@ export default function DocumentsPage() {
                             <StatusBadge status={d.status} label={statusLabel(d.status)} />
                           </div>
                         </div>
-                        <button onClick={() => handleDelete(d)} className="p-1.5 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5 shrink-0" aria-label="Supprimer ce document">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {d.type !== "BL" && (
+                            <button onClick={() => handleDuplicate(d)} className="p-1.5 text-navy/50 dark:text-white/40 hover:text-navy dark:hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-navy/5 dark:hover:bg-white/5" aria-label="Dupliquer ce document">
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button onClick={() => handleDelete(d)} className="p-1.5 text-red/60 hover:text-red transition-colors cursor-pointer rounded-lg hover:bg-red/5" aria-label="Supprimer ce document">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                       {d.customerName && (
                         <p className="text-[11px] text-txt2 mb-1 truncate">{d.customerName}</p>
@@ -302,10 +333,10 @@ export default function DocumentsPage() {
                          <span className="text-xs font-bold text-navy dark:text-white">{d.total > 0 ? `${fmtNum(d.total)} FCFA` : "—"}</span>
                       </div>
                       {d.convertedFrom && (
-                        <p className="text-[9px] text-purple-600 mt-1">de {d.convertedFrom.num}</p>
+                        <p className="text-[9px] text-purple-600 dark:text-purple-300 mt-1">de {d.convertedFrom.num}</p>
                       )}
                       {d.conversions && d.conversions.length > 0 && (
-                        <p className="text-[9px] text-purple-600 mt-1">→ {d.conversions[0].num}</p>
+                        <p className="text-[9px] text-purple-600 dark:text-purple-300 mt-1">→ {d.conversions[0].num}</p>
                       )}
                       {d.type === "DEFINITIVE" && d.saleMode === "LIVRAISON" && !d.deliveryNotes?.length && (
                         <button onClick={() => handleCreateBL(d)} className="text-[11px] text-[#8a6d1f] dark:text-gold font-semibold hover:underline cursor-pointer mt-1">
